@@ -788,14 +788,15 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 		kvm_riscv_check_vcpu_requests(vcpu);
 
-		preempt_disable();
-
 		/* Update AIA HW state before entering guest */
+		// ACE potential merge problem with enable/disable irqs
+		preempt_disable();
 		ret = kvm_riscv_vcpu_aia_update(vcpu);
 		if (ret <= 0) {
 			preempt_enable();
 			continue;
 		}
+		preempt_enable();
 
 		local_irq_disable();
 
