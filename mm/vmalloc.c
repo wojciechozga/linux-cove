@@ -304,6 +304,14 @@ static int vmap_range_noflush(unsigned long addr, unsigned long end,
 	return err;
 }
 
+__weak void ioremap_phys_range_hook(phys_addr_t phys_addr, size_t size, pgprot_t prot)
+{
+}
+
+__weak void iounmap_phys_range_hook(phys_addr_t phys_addr, size_t size)
+{
+}
+
 int ioremap_page_range(unsigned long addr, unsigned long end,
 		phys_addr_t phys_addr, pgprot_t prot)
 {
@@ -315,6 +323,10 @@ int ioremap_page_range(unsigned long addr, unsigned long end,
 	if (!err)
 		kmsan_ioremap_page_range(addr, end, phys_addr, prot,
 					 ioremap_max_page_shift);
+
+	if (!err)
+		ioremap_phys_range_hook(phys_addr, end - addr, prot);
+
 	return err;
 }
 
@@ -2772,6 +2784,10 @@ void vunmap(const void *addr)
 				addr);
 		return;
 	}
+
+	if (vm->flags & VM_IOREMAP)
+		iounmap_phys_range_hook(vm->phys_addr, get_vm_area_size(vm));
+
 	kfree(vm);
 }
 EXPORT_SYMBOL(vunmap);
