@@ -75,6 +75,21 @@ static void sbi_dbcn_console_write(struct console *con,
 		  0, 0, 0);
 }
 
+static void sbi_dbcn_console_write(struct console *con,
+				   const char *s, unsigned int n)
+{
+	int ret;
+
+	while (n) {
+		ret = sbi_debug_console_write(s, n);
+		if (ret < 0)
+			break;
+
+		s += ret;
+		n -= ret;
+	}
+}
+
 static int __init early_sbi_setup(struct earlycon_device *device,
 				  const char *opt)
 {
@@ -108,5 +123,15 @@ static int __init early_sbi_setup(struct earlycon_device *device,
 	}
 
 	return ret;
+
+	// ACE possible conflict
+	// if (sbi_debug_console_available)
+	// 	device->con->write = sbi_dbcn_console_write;
+	// else if (IS_ENABLED(CONFIG_RISCV_SBI_V01))
+	// 	device->con->write = sbi_0_1_console_write;
+	// else
+	// 	return -ENODEV;
+
+	// return 0;
 }
 EARLYCON_DECLARE(sbi, early_sbi_setup);
