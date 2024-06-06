@@ -36,6 +36,7 @@
 #include <asm/kasan.h>
 #include <asm/efi.h>
 #include <asm/cove.h>
+#include <asm/covg_sbi.h>
 
 #include "head.h"
 
@@ -270,6 +271,10 @@ void __init setup_arch(char **cmdline_p)
 	setup_initial_init_mm(_stext, _etext, _edata, _end);
 
 	*cmdline_p = boot_command_line;
+
+#ifdef CONFIG_RISCV_COVE_GUEST
+	promote_to_cove_guest(boot_command_line, _dtb_early_pa);
+#endif
 
 	early_ioremap_setup();
 	sbi_init();

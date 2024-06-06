@@ -6,6 +6,7 @@
  *
  * Authors:
  *     Rajnesh Kanwal <rkanwal@rivosinc.com>
+ *     Wojciech Ozga <woz@zurich.ibm.com>
  */
 
 #ifndef __RISCV_COVE_H__
@@ -14,6 +15,7 @@
 #ifdef CONFIG_RISCV_COVE_GUEST
 void riscv_cove_sbi_init(void);
 bool is_cove_guest(void);
+void promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address);
 #else /* CONFIG_RISCV_COVE_GUEST */
 static inline bool is_cove_guest(void)
 {
@@ -22,6 +24,7 @@ static inline bool is_cove_guest(void)
 static inline void riscv_cove_sbi_init(void)
 {
 }
+static inline void promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address) { }
 #endif /* CONFIG_RISCV_COVE_GUEST */
 
 #endif /* __RISCV_COVE_H__ */

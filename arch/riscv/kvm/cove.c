@@ -6,6 +6,7 @@
  *
  * Authors:
  *     Atish Patra <atishp@rivosinc.com>
+ *     Wojciech Ozga <woz@zurich.ibm.com>
  */
 
 #include <linux/cpumask.h>
@@ -25,6 +26,8 @@ struct sbi_cove_tvm_create_params params;
 
 /* We need a global lock as initiate fence can be invoked once per host */
 static DEFINE_SPINLOCK(cove_fence_lock);
+
+DEFINE_STATIC_KEY_FALSE(kvm_riscv_covi_available);
 
 static bool riscv_cove_enabled;
 
@@ -589,9 +592,9 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 
 	/*
 	 * Bind the vsfile here instead during the new vsfile allocation because
-	 * COVH bind call requires the TVM to be in finalized state.
+	 * COVI bind call requires the TVM to be in finalized state.
 	 */
-	if (tvcpuc->imsic.bind_required) {
+	if (likely(kvm_riscv_covi_available()) && tvcpuc->imsic.bind_required) {
 		tvcpuc->imsic.bind_required = false;
 		rc = kvm_riscv_cove_vcpu_imsic_bind(vcpu, BIT(tvcpuc->imsic.vsfile_hgei));
 		if (rc) {
@@ -654,36 +657,41 @@ int kvm_riscv_cove_vcpu_init(struct kvm_vcpu *vcpu)
 	if (!tvcpuc)
 		return -ENOMEM;
 
-	vcpus_page = alloc_pages(GFP_KERNEL | __GFP_ZERO,
-				 get_order_num_pages(tinfo.tvcpu_pages_needed));
-	if (!vcpus_page) {
-		rc = -ENOMEM;
-		goto alloc_page_failed;
-	}
-
 	tvcpuc->vcpu = vcpu;
 	tvcpuc->vcpu_state.npages = tinfo.tvcpu_pages_needed;
-	tvcpuc->vcpu_state.page = vcpus_page;
-	vcpus_phys_addr = page_to_phys(vcpus_page);
+	/*
+	 * CoVE implementations that do static memory partitioning do not support page conversion. So the hypervisor
+	 * does not neet to allocate any pages to store the vCPUs.
+	*/
+	if (tinfo.tvcpu_pages_needed > 0) {
+		vcpus_page = alloc_pages(GFP_KERNEL | __GFP_ZERO, get_order_num_pages(tinfo.tvcpu_pages_needed));
+		if (!vcpus_page) {
+			rc = -ENOMEM;
+			goto alloc_page_failed;
+		}
+		tvcpuc->vcpu_state.page = vcpus_page;
+		vcpus_phys_addr = page_to_phys(vcpus_page);
 
-	rc = cove_convert_pages(vcpus_phys_addr, tvcpuc->vcpu_state.npages, true);
-	if (rc)
-		goto convert_failed;
+		rc = cove_convert_pages(vcpus_phys_addr, tvcpuc->vcpu_state.npages, true);
+		if (rc)
+			goto convert_failed;
 
-	rc = sbi_covh_create_tvm_vcpu(tvmc->tvm_guest_id, vcpu->vcpu_idx, vcpus_phys_addr);
-	if (rc)
-		goto vcpu_create_failed;
-
+		rc = sbi_covh_create_tvm_vcpu(tvmc->tvm_guest_id, vcpu->vcpu_idx, vcpus_phys_addr);
+		if (rc)
+			goto vcpu_create_failed;
+	}
 	vcpu->arch.tc = tvcpuc;
 
 	return 0;
 
 vcpu_create_failed:
 	/* Reclaim all the pages or return to the confidential page pool */
-	sbi_covh_tsm_reclaim_pages(vcpus_phys_addr, tvcpuc->vcpu_state.npages);
+	if (tinfo.tvcpu_pages_needed > 0)
+		sbi_covh_tsm_reclaim_pages(vcpus_phys_addr, tvcpuc->vcpu_state.npages);
 
 convert_failed:
-	__free_pages(vcpus_page, get_order_num_pages(tinfo.tvcpu_pages_needed));
+	if (tinfo.tvcpu_pages_needed > 0)
+		__free_pages(vcpus_page, get_order_num_pages(tinfo.tvcpu_pages_needed));
 
 alloc_page_failed:
 	kfree(tvcpuc);
@@ -877,7 +885,7 @@ reclaim_failed:
 	kvm_err("Memory reclaim failed with rc %d\n", rc);
 }
 
-int kvm_riscv_cove_vm_init(struct kvm *kvm)
+int kvm_riscv_cove_vm_multi_step_init(struct kvm *kvm)
 {
 	struct kvm_cove_tvm_context *tvmc;
 	struct page *tvms_page, *pgt_page;
@@ -980,13 +988,72 @@ done:
 	return rc;
 }
 
+int kvm_riscv_cove_vm_single_step_init(struct kvm_vcpu *vcpu, unsigned long fdt_address,
+				unsigned long tap_addr)
+{
+	struct kvm *kvm = vcpu->kvm;
+	struct kvm_cove_tvm_context *tvmc;
+	unsigned long tvm_gid, target_vcpuid;
+	struct kvm_vcpu *target_vcpu;
+	void *nshmem = nacl_shmem();
+	struct kvm_cpu_context *cp = &vcpu->arch.guest_context;
+	int rc = 0, gpr_id;
+
+	tvmc = kzalloc(sizeof(*tvmc), GFP_KERNEL);
+	if (!tvmc)
+		return -ENOMEM;
+
+	for (gpr_id = 1; gpr_id < 32; gpr_id++) {
+		nacl_shmem_gpr_write_cove(nshmem, KVM_ARCH_GUEST_ZERO + gpr_id * sizeof(unsigned long),
+									((unsigned long *)cp)[gpr_id]);
+	}
+	kvm_arch_vcpu_load(vcpu, smp_processor_id());
+	rc = sbi_covh_tsm_promote_to_tvm(fdt_address, tap_addr, cp->sepc, &tvm_gid);
+	if (rc)
+		goto done;
+
+	INIT_LIST_HEAD(&tvmc->measured_pages);
+	INIT_LIST_HEAD(&tvmc->zero_pages);
+	INIT_LIST_HEAD(&tvmc->shared_pages);
+	INIT_LIST_HEAD(&tvmc->reclaim_pending_pages);
+
+	tvmc->tvm_guest_id = tvm_gid;
+	tvmc->kvm = kvm;
+	kvm->arch.tvmc = tvmc;
+	vcpu->requests = 0;
+
+	kvm_for_each_vcpu(target_vcpuid, target_vcpu, kvm) {
+		rc = kvm_riscv_cove_vcpu_init(target_vcpu);
+		if (rc)
+			goto vcpus_allocated;
+	}
+
+	tvmc->finalized_done = true;
+	kvm_info("Guest VM creation successful with guest id %lx\n", tvm_gid);
+
+	return 0;
+
+vcpus_allocated:
+	kvm_for_each_vcpu(target_vcpuid, target_vcpu, kvm)
+		if (target_vcpu->arch.tc)
+			kfree(target_vcpu->arch.tc);
+
+done:
+	kfree(tvmc);
+	return rc;
+}
+
 int kvm_riscv_cove_init(void)
 {
 	int rc;
 
-	/* We currently support host in VS mode. Thus, NACL is mandatory */
+	/* NACL is mandatory for CoVE */
 	if (sbi_probe_extension(SBI_EXT_COVH) <= 0 || !kvm_riscv_nacl_available())
 		return -EOPNOTSUPP;
+
+	if (sbi_probe_extension(SBI_EXT_COVI) > 0) {
+		static_branch_enable(&kvm_riscv_covi_available);
+	}
 
 	rc = sbi_covh_tsm_get_info(&tinfo);
 	if (rc < 0)

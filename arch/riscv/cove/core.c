@@ -6,6 +6,7 @@
  *
  * Authors:
  *     Rajnesh Kanwal <rkanwal@rivosinc.com>
+ *     Wojciech Ozga <woz@zurich.ibm.com>
  */
 
 #include <linux/export.h>
@@ -37,4 +38,26 @@ void riscv_cove_sbi_init(void)
 {
 	if (sbi_probe_extension(SBI_EXT_COVG) > 0)
 		is_tvm = true;
+}
+
+void promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address)
+{
+	struct sbiret ret;
+	int rc;
+	unsigned long tap_addr = 0;
+
+	if (strstr(boot_command_line, "promote_to_tvm")) {
+		ret = sbi_ecall(SBI_EXT_COVH, SBI_EXT_COVH_PROMOTE_TO_TVM, fdt_address,
+					tap_addr, 0, 0, 0, 0);
+		if (ret.error) {
+				rc = sbi_err_map_linux_errno(ret.error);
+				goto done;
+		}
+	}
+	pr_info("Promotion to TVM succeeded\n");
+
+	return;
+done:
+	pr_err("Promotion to TVM failed %d\n", rc);
+
 }

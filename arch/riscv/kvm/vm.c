@@ -48,11 +48,11 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 			return -EPERM;
 		}
 
-		r = kvm_riscv_cove_vm_init(kvm);
+		r = kvm_riscv_cove_vm_multi_step_init(kvm);
 		if (r)
 			return r;
 		kvm->arch.vm_type = type;
-		kvm_info("Trusted VM instance init successful\n");
+		kvm_info("CoVE VM instance init successful\n");
 	}
 
 	kvm_riscv_aia_init_vm(kvm);
