@@ -40,10 +40,10 @@ void riscv_cove_sbi_init(void)
 		is_tvm = true;
 }
 
-void promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address)
+int promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address)
 {
 	struct sbiret ret;
-	int rc;
+	int rc = 0;
 	unsigned long tap_addr = 0;
 
 	if (strstr(boot_command_line, "promote_to_tvm")) {
@@ -54,10 +54,11 @@ void promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address)
 				goto done;
 		}
 	}
-	pr_info("Promotion to TVM succeeded\n");
+	pr_info("Promotion to CoVE guest succeeded\n");
 
-	return;
+	return rc;
 done:
-	pr_err("Promotion to TVM failed %d\n", rc);
+	pr_err("Promotion to CoVE guest failed %d\n", rc);
 
+	return rc;
 }
