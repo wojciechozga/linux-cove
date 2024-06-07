@@ -15,6 +15,7 @@
 #include <asm/hwcap.h>
 #include <asm/image.h>
 #include <asm/xip_fixup.h>
+#include <asm/cove_promote.h>
 #include "efi-header.S"
 
 __HEAD
@@ -197,6 +198,17 @@ ENTRY(_start_kernel)
 	/* Mask all interrupts */
 	csrw CSR_IE, zero
 	csrw CSR_IP, zero
+
+#ifdef CONFIG_RISCV_COVE_GUEST_PROMOTE
+	mv s1, a0
+	mv s2, a1
+	li a7, COVE_PROMOTE_SBI_EXT_ID
+	li a6, COVE_PROMOTE_SBI_FID
+	mv a0, a1
+	ecall
+	mv a0, s1
+	mv a1, s2
+#endif
 
 #ifdef CONFIG_RISCV_M_MODE
 	/* flush the instruction cache */
