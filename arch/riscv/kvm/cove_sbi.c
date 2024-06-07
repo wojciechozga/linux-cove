@@ -488,3 +488,23 @@ int sbi_covh_tvm_remove_pages(unsigned long tvmid,
 
 	return 0;
 }
+
+int sbi_covh_tsm_promote_to_tvm(unsigned long fdt_address,
+				unsigned long tap_addr,
+				unsigned long sepc,
+				unsigned long *tvmid)
+{
+	struct sbiret ret;
+	int rc = 0;
+
+	ret = sbi_ecall(SBI_EXT_COVH, SBI_EXT_COVH_PROMOTE_TO_TVM, fdt_address,
+			tap_addr, sepc, 0, 0, 0);
+	if (ret.error) {
+		rc = sbi_err_map_linux_errno(ret.error);
+		goto done;
+	}
+
+	*tvmid = ret.value;
+done:
+	return rc;
+}

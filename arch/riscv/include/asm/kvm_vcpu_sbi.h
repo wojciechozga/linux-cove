@@ -68,6 +68,7 @@ extern const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_experimental;
 extern const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_vendor;
 #ifdef CONFIG_RISCV_COVE_HOST
 extern const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_covg;
+extern const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_covh;
 #endif
 
 #endif /* __RISCV_KVM_VCPU_SBI_H__ */
