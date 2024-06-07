@@ -374,6 +374,7 @@ enum sbi_ext_covh_fid {
 	SBI_EXT_COVH_TVM_PROMOTE_PAGE,
 	SBI_EXT_COVH_TVM_DEMOTE_PAGE,
 	SBI_EXT_COVH_TVM_REMOVE_PAGES,
+	SBI_EXT_COVH_PROMOTE_TO_TVM,
 };
 
 enum sbi_ext_covi_fid {
