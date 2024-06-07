@@ -138,7 +138,10 @@ int kvm_riscv_cove_init(void);
 
 /* TVM related functions */
 void kvm_riscv_cove_vm_destroy(struct kvm *kvm);
-int kvm_riscv_cove_vm_init(struct kvm *kvm);
+int kvm_riscv_cove_vm_single_step_init(struct kvm_vcpu *vcpu, 
+				       unsigned long fdt_address,
+				       unsigned long tap_addr);
+int kvm_riscv_cove_vm_multi_step_init(struct kvm *kvm);
 
 /* TVM VCPU related functions */
 void kvm_riscv_cove_vcpu_destroy(struct kvm_vcpu *vcpu);
@@ -172,7 +175,13 @@ static inline int kvm_riscv_cove_hardware_enable(void) {return 0; }
 
 /* TVM related functions */
 static inline void kvm_riscv_cove_vm_destroy(struct kvm *kvm) {}
-static inline int kvm_riscv_cove_vm_init(struct kvm *kvm) {return -1; }
+static inline int kvm_riscv_cove_vm_single_step_init(struct kvm_vcpu *vcpu,
+						     unsigned long fdt_address,
+						     unsigned long tap_addr) 
+{ 
+	return -1; 
+}
+static inline int kvm_riscv_cove_vm_multi_step_init(struct kvm *kvm) {return -1; }
 
 /* TVM VCPU related functions */
 static inline void kvm_riscv_cove_vcpu_destroy(struct kvm_vcpu *vcpu) {}
