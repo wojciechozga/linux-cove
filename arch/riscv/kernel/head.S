@@ -198,6 +198,19 @@ ENTRY(_start_kernel)
 	csrw CSR_IE, zero
 	csrw CSR_IP, zero
 
+#if defined(CONFIG_RISCV_COVE_GUEST_PROMOTE) && !defined(CONFIG_RISCV_M_MODE)
+	mv s0, a0
+	mv s1, a1
+	/* Request hypervisor to promote to TVM */
+	li a7, 0x434F5648        /* SBI_EXT_COVH */
+	li a6, 0x15              /* SBI_EXT_COVH_PROMOTE_TO_TVM */
+	mv a0, a1                /* DTB physical address */
+	ecall
+	/* Attestation reflects the result of promotion, so ignore it */
+	mv a0, s0
+	mv a1, s1
+#endif /* CONFIG_RISCV_COVE_GUEST_PROMOTE */
+
 #ifdef CONFIG_RISCV_M_MODE
 	/* flush the instruction cache */
 	fence.i
