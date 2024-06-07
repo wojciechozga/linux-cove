@@ -19,6 +19,13 @@
 #include <asm/csr.h>
 #include <asm/sbi.h>
 
+#define KVM_COVE_TSM_CAP_PROMOTE_TVM         0x0
+#define KVM_COVE_TSM_CAP_ATTESTATION_LOCAL   0x1
+#define KVM_COVE_TSM_CAP_ATTESTATION_REMOTE  0x2
+#define KVM_COVE_TSM_CAP_AIA                 0x3
+#define KVM_COVE_TSM_CAP_MRIF                0x4
+#define KVM_COVE_TSM_CAP_MEMORY_ALLOCATION   0x5
+
 #define KVM_COVE_PAGE_SIZE_4K	(1UL << 12)
 #define KVM_COVE_PAGE_SIZE_2MB	(1UL << 21)
 #define KVM_COVE_PAGE_SIZE_1GB	(1UL << 30)
@@ -126,6 +133,7 @@ static inline bool is_cove_vcpu(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_RISCV_COVE_HOST
 
 bool kvm_riscv_cove_enabled(void);
+bool kvm_riscv_cove_capability(unsigned long cap);
 int kvm_riscv_cove_init(void);
 
 /* TVM related functions */
@@ -158,6 +166,7 @@ int kvm_riscv_cove_aia_convert_imsic(struct kvm_vcpu *vcpu, phys_addr_t imsic_pa
 int kvm_riscv_cove_vcpu_imsic_addr(struct kvm_vcpu *vcpu);
 #else
 static inline bool kvm_riscv_cove_enabled(void) {return false; };
+static inline bool kvm_riscv_cove_capability(unsigned long cap) { return false; };
 static inline int kvm_riscv_cove_init(void) { return -1; }
 static inline void kvm_riscv_cove_hardware_disable(void) {}
 static inline int kvm_riscv_cove_hardware_enable(void) {return 0; }
