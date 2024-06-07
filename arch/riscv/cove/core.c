@@ -38,3 +38,24 @@ void riscv_cove_sbi_init(void)
 	if (sbi_probe_extension(SBI_EXT_COVG) > 0)
 		is_tvm = true;
 }
+
+int promote_to_cove_guest(char *boot_command_line, unsigned long fdt_address)
+{
+	struct sbiret ret;
+	int rc = 0;
+
+	if (strstr(boot_command_line, "promote_to_cove_guest")) {
+		ret = sbi_ecall(SBI_EXT_COVH, SBI_EXT_COVH_PROMOTE_TO_TVM, fdt_address,
+				0, 0, 0, 0, 0);
+		if (ret.error) {
+				rc = sbi_err_map_linux_errno(ret.error);
+				goto done;
+		}
+	}
+	pr_info("Promotion to CoVE guest succeeded\n");
+	return rc;
+
+done:
+	pr_err("Promotion to CoVE guest failed %d\n", rc);
+	return rc;
+}

@@ -36,6 +36,7 @@
 #include <asm/kasan.h>
 #include <asm/efi.h>
 #include <asm/cove.h>
+#include <asm/covg_sbi.h>
 
 #include "head.h"
 
@@ -267,6 +268,7 @@ static void __init parse_dtb(void)
 void __init setup_arch(char **cmdline_p)
 {
 	parse_dtb();
+	promote_to_cove_guest(boot_command_line, dtb_early_pa);
 	setup_initial_init_mm(_stext, _etext, _edata, _end);
 
 	*cmdline_p = boot_command_line;
