@@ -253,6 +253,9 @@ static int __init sifive_ccache_init(void)
 	int i, rc, intr_num;
 	const struct of_device_id *match;
 	unsigned long quirks;
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	unsigned int config, ways;
+#endif
 
 	np = of_find_matching_node_and_match(NULL, sifive_ccache_ids, &match);
 	if (!np)
@@ -293,6 +296,12 @@ static int __init sifive_ccache_init(void)
 		}
 	}
 	of_node_put(np);
+
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	config = readl(ccache_base + SIFIVE_CCACHE_CONFIG);
+	ways = (config >> 8) & 0xff;
+	writel(ways-1, ccache_base + SIFIVE_CCACHE_WAYENABLE);
+#endif
 
 #ifdef CONFIG_RISCV_NONSTANDARD_CACHE_OPS
 	if (quirks & QUIRK_NONSTANDARD_CACHE_OPS) {
