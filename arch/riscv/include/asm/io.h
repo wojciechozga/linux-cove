@@ -51,6 +51,7 @@
 #define __io_par(v)	__asm__ __volatile__ ("fence i,ior" : : : "memory");
 #define __io_pbw()	__asm__ __volatile__ ("fence iow,o" : : : "memory");
 #define __io_paw()	__asm__ __volatile__ ("fence o,io"  : : : "memory");
+#define __iomb()    mb()
 
 /*
  * Accesses from a single hart to a single I/O address must be ordered.  This

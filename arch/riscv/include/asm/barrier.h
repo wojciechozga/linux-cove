@@ -71,6 +71,8 @@ do {									\
  */
 #define smp_mb__after_spinlock()	RISCV_FENCE(iorw,iorw)
 
+#define wfe()   do { } while (0)
+
 #include <asm-generic/barrier.h>
 
 #endif /* __ASSEMBLY__ */
