@@ -30,8 +30,24 @@
 #include "arm-smmu-v3.h"
 #include "../../dma-iommu.h"
 #include "../../iommu-sva.h"
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+#include <dt-bindings/memory/eic7700-sid.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
+#define ESWIN_SMMU_IRQ_CLEAR_REG	1
+
+/* smmu interrupt clear bits */
+#define TCU_U84_EVENT_Q_IRPT_NS_CLR_BIT     9
+#define TCU_U84_PRI_Q_IRPT_NS_CLR_BIT       10
+#define TCU_U84_GLOBAL_IRPT_NS_CLR_BIT      13
+#endif
+
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+static bool disable_bypass = false;
+#else
 static bool disable_bypass = true;
+#endif
 module_param(disable_bypass, bool, 0444);
 MODULE_PARM_DESC(disable_bypass,
 	"Disable bypass streams such that incoming transactions from devices that are not attached to an iommu domain will report an abort back to the device and will not be allowed to pass through the SMMU.");
@@ -1349,6 +1365,7 @@ static void arm_smmu_write_strtab_ent(struct arm_smmu_master *master, u32 sid,
 			STRTAB_STE_1_STRW_EL2 : STRTAB_STE_1_STRW_NSEL1;
 
 		BUG_ON(ste_live);
+
 		dst[1] = cpu_to_le64(
 			 FIELD_PREP(STRTAB_STE_1_S1DSS, STRTAB_STE_1_S1DSS_SSID0) |
 			 FIELD_PREP(STRTAB_STE_1_S1CIR, STRTAB_STE_1_S1C_CACHE_WBRA) |
@@ -1560,6 +1577,33 @@ out_unlock:
 	return ret;
 }
 
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+static void eswin_smmu_irq_clear(struct arm_smmu_device *smmu, int clearbit)
+{
+	int bitmask;
+	bitmask = BIT(clearbit);
+
+	regmap_write(smmu->regmap, smmu->smmu_irq_clear_reg, bitmask);
+}
+
+static irqreturn_t eswin_smmu_irq_clear_handler(int irq, void *dev)
+{
+	struct arm_smmu_device *smmu = dev;
+
+	if (irq == smmu->evtq.q.irq) {
+			eswin_smmu_irq_clear(smmu, TCU_U84_EVENT_Q_IRPT_NS_CLR_BIT);
+	}
+	else if (irq == smmu->priq.q.irq) {
+			eswin_smmu_irq_clear(smmu, TCU_U84_PRI_Q_IRPT_NS_CLR_BIT);
+	}
+	else {
+		return IRQ_NONE;
+	}
+
+    return IRQ_WAKE_THREAD;
+}
+#endif
+
 static irqreturn_t arm_smmu_evtq_thread(int irq, void *dev)
 {
 	int i, ret;
@@ -1663,6 +1707,10 @@ static irqreturn_t arm_smmu_gerror_handler(int irq, void *dev)
 {
 	u32 gerror, gerrorn, active;
 	struct arm_smmu_device *smmu = dev;
+
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	eswin_smmu_irq_clear(smmu, TCU_U84_GLOBAL_IRPT_NS_CLR_BIT);
+#endif
 
 	gerror = readl_relaxed(smmu->base + ARM_SMMU_GERROR);
 	gerrorn = readl_relaxed(smmu->base + ARM_SMMU_GERRORN);
@@ -2402,6 +2450,7 @@ static void arm_smmu_detach_dev(struct arm_smmu_master *master)
 
 	master->domain = NULL;
 	master->ats_enabled = false;
+
 	arm_smmu_install_ste_for_dev(master);
 }
 
@@ -2453,7 +2502,6 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		ret = -EINVAL;
 		goto out_unlock;
 	}
-
 	master->domain = smmu_domain;
 
 	/*
@@ -2617,7 +2665,6 @@ static int arm_smmu_insert_master(struct arm_smmu_device *smmu,
 		}
 		if (ret)
 			break;
-
 		rb_link_node(&new_stream->node, parent_node, new_node);
 		rb_insert_color(&new_stream->node, &smmu->streams);
 	}
@@ -3205,10 +3252,17 @@ static void arm_smmu_setup_unique_irqs(struct arm_smmu_device *smmu)
 	/* Request interrupt lines */
 	irq = smmu->evtq.q.irq;
 	if (irq) {
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+		ret = devm_request_threaded_irq(smmu->dev, irq, eswin_smmu_irq_clear_handler,
+						arm_smmu_evtq_thread,
+						IRQF_ONESHOT,
+						"arm-smmu-v3-evtq", smmu);
+#else
 		ret = devm_request_threaded_irq(smmu->dev, irq, NULL,
 						arm_smmu_evtq_thread,
 						IRQF_ONESHOT,
 						"arm-smmu-v3-evtq", smmu);
+#endif
 		if (ret < 0)
 			dev_warn(smmu->dev, "failed to enable evtq irq\n");
 	} else {
@@ -3228,11 +3282,19 @@ static void arm_smmu_setup_unique_irqs(struct arm_smmu_device *smmu)
 	if (smmu->features & ARM_SMMU_FEAT_PRI) {
 		irq = smmu->priq.q.irq;
 		if (irq) {
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+			ret = devm_request_threaded_irq(smmu->dev, irq, eswin_smmu_irq_clear_handler,
+							arm_smmu_priq_thread,
+							IRQF_ONESHOT,
+							"arm-smmu-v3-priq",
+							smmu);
+#else
 			ret = devm_request_threaded_irq(smmu->dev, irq, NULL,
 							arm_smmu_priq_thread,
 							IRQF_ONESHOT,
 							"arm-smmu-v3-priq",
 							smmu);
+#endif
 			if (ret < 0)
 				dev_warn(smmu->dev,
 					 "failed to enable priq irq\n");
@@ -3523,8 +3585,10 @@ static int arm_smmu_device_hw_probe(struct arm_smmu_device *smmu)
 
 	if (reg & IDR0_HYP) {
 		smmu->features |= ARM_SMMU_FEAT_HYP;
+		#ifdef CONFIG_ARM64
 		if (cpus_have_cap(ARM64_HAS_VIRT_HOST_EXTN))
 			smmu->features |= ARM_SMMU_FEAT_E2H;
+		#endif
 	}
 
 	/*
@@ -3849,8 +3913,23 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 		smmu->page1 = smmu->base;
 	}
 
-	/* Interrupt lines */
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	/* eswin, syscon devie is used for clearing the smmu interrupt */
+	smmu->regmap = syscon_regmap_lookup_by_phandle(dev->of_node, "eswin,syscfg");
+	if (IS_ERR(smmu->regmap)) {
+		dev_err(smmu->dev, "No syscfg phandle specified\n");
+		return PTR_ERR(smmu->regmap);
+	}
 
+	ret = of_property_read_u32_index(dev->of_node, "eswin,syscfg", ESWIN_SMMU_IRQ_CLEAR_REG,
+					&smmu->smmu_irq_clear_reg);
+	if (ret) {
+		dev_err(dev, "can't get SMMU irq clear reg offset (%d)\n", ret);
+		return ret;
+	}
+#endif
+
+	/* Interrupt lines */
 	irq = platform_get_irq_byname_optional(pdev, "combined");
 	if (irq > 0)
 		smmu->combined_irq = irq;
