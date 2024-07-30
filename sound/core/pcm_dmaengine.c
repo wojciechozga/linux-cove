@@ -159,11 +159,18 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
 		flags |= DMA_PREP_INTERRUPT;
 
 	prtd->pos = 0;
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	desc = dmaengine_prep_dma_cyclic(chan,
+		substream->runtime->dma_addr,
+		snd_pcm_lib_buffer_bytes(substream) * 64 / substream->runtime->frame_bits,
+		snd_pcm_lib_period_bytes(substream) * 64 / substream->runtime->frame_bits,
+		direction, flags);
+#else
 	desc = dmaengine_prep_dma_cyclic(chan,
 		substream->runtime->dma_addr,
 		snd_pcm_lib_buffer_bytes(substream),
 		snd_pcm_lib_period_bytes(substream), direction, flags);
-
+#endif
 	if (!desc)
 		return -ENOMEM;
 

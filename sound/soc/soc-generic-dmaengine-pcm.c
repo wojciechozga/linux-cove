@@ -15,7 +15,12 @@
 
 #include <sound/dmaengine_pcm.h>
 
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+static unsigned int prealloc_buffer_size_kbytes = 1024;
+#else
 static unsigned int prealloc_buffer_size_kbytes = 512;
+#endif
+
 module_param(prealloc_buffer_size_kbytes, uint, 0444);
 MODULE_PARM_DESC(prealloc_buffer_size_kbytes, "Preallocate DMA buffer size (KB).");
 
@@ -152,6 +157,13 @@ static int dmaengine_pcm_open(struct snd_soc_component *component,
 	struct dma_chan *chan = pcm->chan[substream->stream];
 	int ret;
 
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	pcm->tmp_buf[substream->stream] =
+		kzalloc(prealloc_buffer_size_kbytes * 1024, GFP_KERNEL);
+	if (!pcm->tmp_buf[substream->stream]) {
+		return -ENOMEM;
+	}
+#endif
 	ret = dmaengine_pcm_set_runtime_hwparams(component, substream);
 	if (ret)
 		return ret;
@@ -162,6 +174,13 @@ static int dmaengine_pcm_open(struct snd_soc_component *component,
 static int dmaengine_pcm_close(struct snd_soc_component *component,
 			       struct snd_pcm_substream *substream)
 {
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	struct dmaengine_pcm *pcm = soc_component_to_pcm(component);
+
+	if (pcm->tmp_buf[substream->stream]) {
+		kfree(pcm->tmp_buf[substream->stream]);
+	}
+#endif
 	return snd_dmaengine_pcm_close(substream);
 }
 
@@ -287,6 +306,72 @@ static snd_pcm_uframes_t dmaengine_pcm_pointer(
 		return snd_dmaengine_pcm_pointer(substream);
 }
 
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+static int dmaengine_pcm_process(struct snd_soc_component *component,
+			       struct snd_pcm_substream *substream,
+			       int channel, unsigned long hwoff,
+			       struct iov_iter *buf, unsigned long bytes)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct dmaengine_pcm *pcm = soc_component_to_pcm(component);
+	bool is_playback = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	char *dma_ptr = (char *)runtime->dma_area + hwoff * 64 / runtime->frame_bits +
+			channel * (runtime->dma_bytes / runtime->channels);
+	snd_pcm_uframes_t frames;
+	unsigned int lc_size = runtime->frame_bits / 8 / 2;
+	unsigned int rc_size = runtime->frame_bits / 8 / 2;
+	char *tb_ptr;
+
+	if (is_playback) {
+		if (runtime->sample_bits != 32) {
+			if (copy_from_iter(pcm->tmp_buf[0], bytes, buf) != bytes) {
+				return -EFAULT;
+			}
+
+			frames = bytes_to_frames(runtime, bytes);
+			tb_ptr = pcm->tmp_buf[0];
+			while (frames) {
+				memcpy(dma_ptr, tb_ptr, lc_size);
+				memset(dma_ptr + lc_size, 0, (4 - lc_size));
+				dma_ptr += 4;
+				tb_ptr += lc_size;
+				memcpy(dma_ptr, tb_ptr, rc_size);
+				memset(dma_ptr + rc_size, 0, (4 - rc_size));
+				dma_ptr += 4;
+				tb_ptr += rc_size;
+				frames--;
+			}
+		} else {
+			if (copy_from_iter(dma_ptr, bytes, buf) != bytes) {
+				return -EFAULT;
+			}
+		}
+	} else {
+		if (runtime->sample_bits != 32) {
+			frames = bytes_to_frames(runtime, bytes);
+			tb_ptr = pcm->tmp_buf[1];
+			while (frames) {
+				memcpy(tb_ptr, dma_ptr, lc_size);
+				tb_ptr += lc_size;
+				dma_ptr += 4;
+				memcpy(tb_ptr, dma_ptr, rc_size);
+				tb_ptr += rc_size;
+				dma_ptr += 4;
+				frames--;
+			}
+			if (copy_to_iter(pcm->tmp_buf[1], bytes, buf) != bytes) {
+				return -EFAULT;
+			}
+		} else {
+			if (copy_to_iter(dma_ptr, bytes, buf) != bytes) {
+				return -EFAULT;
+			}
+		}
+	}
+	return 0;
+}
+#endif
+
 static int dmaengine_copy(struct snd_soc_component *component,
 			  struct snd_pcm_substream *substream,
 			  int channel, unsigned long hwoff,
@@ -326,6 +411,9 @@ static const struct snd_soc_component_driver dmaengine_pcm_component = {
 	.hw_params	= dmaengine_pcm_hw_params,
 	.trigger	= dmaengine_pcm_trigger,
 	.pointer	= dmaengine_pcm_pointer,
+#ifdef CONFIG_SOC_SIFIVE_EIC7700
+	.copy	        = dmaengine_pcm_process,
+#endif
 	.pcm_construct	= dmaengine_pcm_new,
 };
 
