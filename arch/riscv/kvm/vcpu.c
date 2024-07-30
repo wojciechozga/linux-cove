@@ -517,11 +517,15 @@ static u64 kvm_riscv_vcpu_get_henvcfg(const unsigned long *isa)
 	if (riscv_isa_extension_available(isa, ZICBOZ))
 		henvcfg |= ENVCFG_CBZE;
 
+
+#ifndef CONFIG_SOC_SIFIVE_EIC7700
 	if (kvm_riscv_nacl_sync_csr_available()) {
 		nacl_csr_write(CSR_HENVCFG, henvcfg);
 	} else {
 		csr_write(CSR_HENVCFG, henvcfg);
 	}
+#endif
+
 #ifdef CONFIG_32BIT
 	nacl_csr_write(CSR_HENVCFGH, henvcfg >> 32);
 #endif
