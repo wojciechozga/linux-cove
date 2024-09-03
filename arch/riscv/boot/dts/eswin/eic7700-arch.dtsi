@@ -62,7 +62,8 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&L15>;
 			reg = <0x0>;
-			riscv,isa = "rv64imafdc_h_zicsr_zifencei_zba_zbb_sscofpmf";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
 			riscv,pmpgranularity = <4096>;
 			riscv,pmpregions = <8>;
 			sifive,buserror = <&L16>;
@@ -126,7 +127,8 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&L20>;
 			reg = <0x1>;
-			riscv,isa = "rv64imafdc_h_zicsr_zifencei_zba_zbb_sscofpmf";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
 			riscv,pmpgranularity = <4096>;
 			riscv,pmpregions = <8>;
 			sifive,buserror = <&L21>;
@@ -190,7 +192,8 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&L25>;
 			reg = <0x2>;
-			riscv,isa = "rv64imafdc_h_zicsr_zifencei_zba_zbb_sscofpmf";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
 			riscv,pmpgranularity = <4096>;
 			riscv,pmpregions = <8>;
 			sifive,buserror = <&L26>;
@@ -254,7 +257,8 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&L30>;
 			reg = <0x3>;
-			riscv,isa = "rv64imafdc_h_zicsr_zifencei_zba_zbb_sscofpmf";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
 			riscv,pmpgranularity = <4096>;
 			riscv,pmpregions = <8>;
 			sifive,buserror = <&L31>;
