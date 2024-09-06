@@ -4544,6 +4544,9 @@
 			Param: <number> - step/bucket size as a power of 2 for
 				statistical time based profiling.
 
+	promote_to_cove_guest=	[RISCV] Isolate VM from the hypervisor.
+			Format: <bool>
+
 	prompt_ramdisk=	[RAM] [Deprecated]
 
 	prot_virt=	[S390] enable hosting protected virtual machines

@@ -730,8 +730,8 @@ long kvm_arch_vcpu_async_ioctl(struct file *filp,
 
 	if (ioctl == KVM_INTERRUPT) {
 		struct kvm_interrupt irq;
-		/* We do not support user space emulated IRQCHIP for TVMs yet */
-		if (is_cove_vcpu(vcpu))
+		/* We do not support user space emulated IRQCHIP for TVMs that utilize AIA yet */
+		if (is_cove_vcpu(vcpu) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			return -ENXIO;
 
 		if (copy_from_user(&irq, argp, sizeof(irq)))
@@ -997,7 +997,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (unlikely(kvm_riscv_cove_enabled()) || kvm_riscv_nacl_sync_csr_available()) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);
@@ -1061,7 +1061,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	kvm_riscv_vcpu_timer_save(vcpu);
 
-	if (kvm_riscv_nacl_available()) {
+	if (kvm_riscv_nacl_sync_csr_available()) {
 		/**
 		 * For TVMs, we don't need a separate case as TSM only updates
 		 * the required CSRs during the world switch. All other CSR
@@ -1325,8 +1325,11 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 */
 		kvm_riscv_vcpu_flush_interrupts(vcpu);
 
-		/* Update HVIP CSR for current CPU only for non TVMs */
-		if (!is_cove_vcpu(vcpu))
+		/*
+		 * Do not update HVIP CSR for TVMs with AIA because AIA
+		 * provides alternative method to inject interrupts.
+		*/
+		if (!is_cove_vcpu(vcpu) || !kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			kvm_riscv_update_hvip(vcpu);
 
 		if (ret <= 0 ||
