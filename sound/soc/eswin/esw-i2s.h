@@ -1,4 +1,12 @@
 /*
+ * Copyright (ST) 2012 Rajeev Kumar (rajeevkumar.linux@gmail.com)
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2. This program is licensed "as is" without any
+ * warranty of any kind, whether express or implied.
+ */
+
+/*
  *
  * Copyright (C) 2021 ESWIN, Inc. All rights reserved.
  *
@@ -27,18 +35,6 @@
 #include <sound/dmaengine_pcm.h>
 #include <sound/designware_i2s.h>
 
-/* defaults */
-#define MAX_BUFFER_SIZE		(64*1024)
-#define MIN_PERIOD_SIZE		64
-#define MAX_PERIOD_SIZE		MAX_BUFFER_SIZE
-#define USE_FORMATS 		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
-#define USE_RATE		SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_8000_48000
-#define USE_RATE_MIN		5500
-#define USE_RATE_MAX		48000
-#define USE_CHANNELS_MIN 	1
-#define USE_CHANNELS_MAX 	2
-#define USE_PERIODS_MIN 	1
-#define USE_PERIODS_MAX 	1024
 
 /* common register for all channel */
 #define IER		0x000
@@ -118,7 +114,7 @@
 /* Number of entries in WORDSIZE and DATA_WIDTH parameter registers */
 #define	COMP_MAX_WORDSIZE	(1 << 3)
 #define	COMP_MAX_DATA_WIDTH	(1 << 2)
-#define MAX_CHANNEL_NUM		8
+#define MAX_CHANNEL_NUM		2
 #define MIN_CHANNEL_NUM		2
 #define STEREO		0
 #define TDM		1
@@ -179,38 +175,6 @@ struct i2s_dev {
 	u32 i2s_div_num;
 	bool playback_active;
 	bool capture_active;
-	u32 eswin_plat;
 };
 
-static const struct snd_pcm_hardware pcm_hardware = {
-	.info =			(SNDRV_PCM_INFO_MMAP |
-				 SNDRV_PCM_INFO_INTERLEAVED |
-				 SNDRV_PCM_INFO_RESUME |
-				 SNDRV_PCM_INFO_MMAP_VALID),
-	.formats =		USE_FORMATS,
-	.rates =		USE_RATE,
-	.rate_min =		USE_RATE_MIN,
-	.rate_max =		USE_RATE_MAX,
-	.channels_min =		USE_CHANNELS_MIN,
-	.channels_max =		USE_CHANNELS_MAX,
-	.buffer_bytes_max =	MAX_BUFFER_SIZE,
-	.period_bytes_min =	MIN_PERIOD_SIZE,
-	.period_bytes_max =	MAX_PERIOD_SIZE,
-	.periods_min =		USE_PERIODS_MIN,
-	.periods_max =		USE_PERIODS_MAX,
-	.fifo_size =		0,
-};
-
-#if IS_ENABLED(CONFIG_SND_ESWIN_DW_PCM)
-void i2s_pcm_push_tx(struct i2s_dev *i2s_drvdata,int type);
-void i2s_pcm_pop_rx(struct i2s_dev *i2s_drvdata,int type);
-int i2s_pcm_register(struct platform_device *pdev);
-#else
-static inline void i2s_pcm_push_tx(struct i2s_dev *i2s_drvdata,int type) { }
-static inline void i2s_pcm_pop_rx(struct i2s_dev *i2s_drvdata,int type) { }
-static inline int i2s_pcm_register(struct platform_device *pdev)
-{
-	return -EINVAL;
-}
-#endif
 #endif /* __I2S_H */

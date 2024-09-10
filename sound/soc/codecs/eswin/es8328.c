@@ -1,25 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * ESWIN Codec root complex driver
+ * es8328.c  --  ES8328 ALSA SoC Audio driver
  *
- * Copyright 2024, Beijing ESWIN Computing Technology Co., Ltd.. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0
+ * Copyright 2014 Sutajio Ko-Usagi PTE LTD
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *
- * Authors: Lei Deng <denglei@eswincomputing.com>
+ * Author: Sean Cross <xobs@kosagi.com>
  */
-
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -29,13 +15,19 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
+#include <linux/gpio/consumer.h>
+
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
+
 #include "es8328.h"
+
+#define MIN_CHANNEL_NUM		2
+#define MAX_CHANNEL_NUM		2
 
 static const unsigned int rates_12288[] = {
 	8000, 12000, 16000, 24000, 32000, 48000, 96000,
@@ -72,6 +64,14 @@ enum sgtl5000_regulator_supplies {
 	ES8328_SUPPLY_NUM
 };
 
+/* vddd is optional supply */
+static const char * const supply_names[ES8328_SUPPLY_NUM] = {
+	"DVDD",
+	"AVDD",
+	"PVDD",
+	"HPVDD",
+};
+
 #define ES8328_RATES (SNDRV_PCM_RATE_192000 | \
 		SNDRV_PCM_RATE_96000 | \
 		SNDRV_PCM_RATE_88200 | \
@@ -92,6 +92,11 @@ struct es8328_priv {
 	const int *mclk_ratios;
 	bool provider;
 	struct regulator_bulk_data supplies[ES8328_SUPPLY_NUM];
+
+	u32 eswin_plat;
+	struct snd_soc_component *component;
+	struct gpio_desc *front_jack_gpio;
+	struct gpio_desc *back_jack_gpio;
 };
 
 /*
@@ -169,6 +174,7 @@ static int es8328_put_deemph(struct snd_kcontrol *kcontrol,
 
 	if (es8328->deemph == deemph)
 		return 0;
+
 	ret = es8328_set_deemph(component);
 	if (ret < 0)
 		return ret;
@@ -778,8 +784,19 @@ static int es8328_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	/* Set MIC PGA Volume */
 	snd_soc_component_write(component, ES8328_ADCCONTROL1, 0x88);
 
-	/* Select Capture path ---> phone mic */
-	snd_soc_component_write(component, ES8328_ADCCONTROL2, 0xf0);
+	if (es8328->eswin_plat == 2) {
+		if (gpiod_get_value(es8328->front_jack_gpio) == 1 && gpiod_get_value(es8328->back_jack_gpio) == 0) {
+			/* Select default capture path ---> LIN1 */
+			snd_soc_component_write(component, ES8328_ADCCONTROL2, 0);
+		} else {
+			/* Select default capture path ---> LIN2 */
+			snd_soc_component_write(component, ES8328_ADCCONTROL2, 0x50);
+		}
+	} else {
+		/* Select default capture path ---> phone mic */
+		snd_soc_component_write(component, ES8328_ADCCONTROL2, 0xf0);
+	}
+
 	snd_soc_component_update_bits(component, ES8328_ADCCONTROL3,
 			ES8328_ADCCONTROL3_DS, 0);
 
@@ -857,15 +874,15 @@ static struct snd_soc_dai_driver es8328_dai[3] = {
 		.name = "es8328-0-hifi-analog",
 		.playback = {
 			.stream_name = "Playback",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
 		.capture = {
 			.stream_name = "Capture",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
@@ -876,15 +893,15 @@ static struct snd_soc_dai_driver es8328_dai[3] = {
 		.name = "es8328-1-hifi-analog",
 		.playback = {
 			.stream_name = "Playback",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
 		.capture = {
 			.stream_name = "Capture",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
@@ -895,15 +912,15 @@ static struct snd_soc_dai_driver es8328_dai[3] = {
 		.name = "es8328-2-hifi-analog",
 		.playback = {
 			.stream_name = "Playback",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
 		.capture = {
 			.stream_name = "Capture",
-			.channels_min = 2,
-			.channels_max = 2,
+			.channels_min = MIN_CHANNEL_NUM,
+			.channels_max = MAX_CHANNEL_NUM,
 			.rates = ES8328_RATES,
 			.formats = ES8328_FORMATS,
 		},
@@ -934,6 +951,10 @@ static int es8328_resume(struct snd_soc_component *component)
 
 static int es8328_component_probe(struct snd_soc_component *component)
 {
+	struct es8328_priv *es8328 = snd_soc_component_get_drvdata(component);
+
+	es8328->component = component;
+
 	return 0;
 }
 
@@ -945,7 +966,7 @@ const struct regmap_config es8328_regmap_config = {
 	.reg_bits	= 8,
 	.val_bits	= 8,
 	.max_register	= ES8328_REG_MAX,
-	.cache_type	= REGCACHE_RBTREE,
+	.cache_type	= REGCACHE_MAPLE,
 	.use_single_read = true,
 	.use_single_write = true,
 };
@@ -969,6 +990,33 @@ static const struct snd_soc_component_driver es8328_component_driver = {
 	.endianness		= 1,
 };
 
+static irqreturn_t es8328_jack_irq(int irq, void *data)
+{
+	struct es8328_priv *es8328 = data;
+	struct snd_soc_component *comp = es8328->component;
+	int front_jack_value, back_jack_value;
+
+	if (!es8328->front_jack_gpio || !es8328->back_jack_gpio) {
+		dev_warn(comp->dev, "jack gpio desc is null\n");
+		return IRQ_NONE;
+	}
+
+	front_jack_value = gpiod_get_value(es8328->front_jack_gpio);
+	back_jack_value = gpiod_get_value(es8328->back_jack_gpio);
+
+	dev_dbg(comp->dev, "front jack value:%d, back jack value:%d\n", front_jack_value, back_jack_value);
+
+	if (back_jack_value == 0 && front_jack_value == 1) {
+		/* Select Capture path ---> LIN1 */
+		regmap_write(comp->regmap, ES8328_ADCCONTROL2, 0);
+	} else {
+		/* Select Capture path ---> LIN2 */
+		regmap_write(comp->regmap, ES8328_ADCCONTROL2, 0x50);
+	}
+
+	return IRQ_HANDLED;
+}
+
 int es8328_probe(struct device *dev, struct regmap *regmap)
 {
 	struct es8328_priv *es8328;
@@ -985,15 +1033,49 @@ int es8328_probe(struct device *dev, struct regmap *regmap)
 
 	dev_set_drvdata(dev, es8328);
 
+	ret = device_property_read_u32(dev, "eswin-plat", &es8328->eswin_plat);
+	if (0 != ret) {
+		es8328->eswin_plat = 0;
+	}
+	dev_info(dev, "eswin platform:%d\n", es8328->eswin_plat);
+
+	if (es8328->eswin_plat == 2) {
+		es8328->front_jack_gpio = devm_gpiod_get(dev, "front-jack", GPIOD_IN);
+		ret = IS_ERR(es8328->front_jack_gpio);
+		if(ret) {
+			dev_err(dev, "can not get front jack gpio\n");
+		}
+
+		es8328->back_jack_gpio = devm_gpiod_get(dev, "back-jack", GPIOD_IN);
+		ret = IS_ERR(es8328->back_jack_gpio);
+		if(ret) {
+			dev_err(dev, "can not get back jack gpio\n");
+		}
+
+		ret = devm_request_threaded_irq(dev, gpiod_to_irq(es8328->front_jack_gpio), NULL, es8328_jack_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				"front jack", es8328);
+		if (ret) {
+			dev_err(dev, "Failed to request front irq[%d], ret:%d\n", gpiod_to_irq(es8328->back_jack_gpio), ret);
+		}
+
+		ret = devm_request_threaded_irq(dev, gpiod_to_irq(es8328->back_jack_gpio), NULL, es8328_jack_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				"back jack", es8328);
+		if (ret) {
+			dev_err(dev, "Failed to request back irq[%d], ret:%d\n", gpiod_to_irq(es8328->back_jack_gpio), ret);
+		}
+	}
+
 	if (of_node_name_prefix(dev->of_node, "es8388-0")) {
 		ret = devm_snd_soc_register_component(dev,
-					&es8328_component_driver, &es8328_dai[0], 1);
+				&es8328_component_driver, &es8328_dai[0], 1);
 	} else if (of_node_name_prefix(dev->of_node, "es8388-1")) {
 		ret = devm_snd_soc_register_component(dev,
-					&es8328_component_driver, &es8328_dai[1], 1);
+				&es8328_component_driver, &es8328_dai[1], 1);
 	} else {
 		ret = devm_snd_soc_register_component(dev,
-					&es8328_component_driver, &es8328_dai[2], 1);
+				&es8328_component_driver, &es8328_dai[2], 1);
 	}
 
 	return ret;

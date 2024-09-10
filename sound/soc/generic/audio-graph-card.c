@@ -161,9 +161,6 @@ static int graph_link_init(struct asoc_simple_priv *priv,
 	if (priv->ops)
 		dai_link->ops	= priv->ops;
 
-#ifdef CONFIG_SOC_SIFIVE_EIC7700
-	dai_link->trigger_stop = SND_SOC_TRIGGER_ORDER_LDC;
-#endif
 	return asoc_simple_set_dailink_name(dev, dai_link, name);
 }
 

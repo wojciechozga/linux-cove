@@ -1,23 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * ESWIN Codec root complex driver
+ * es8328-i2c.c  --  ES8328 ALSA SoC I2C Audio driver
  *
- * Copyright 2024, Beijing ESWIN Computing Technology Co., Ltd.. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0
+ * Copyright 2014 Sutajio Ko-Usagi PTE LTD
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *
- * Authors: Lei Deng <denglei@eswincomputing.com>
+ * Author: Sean Cross <xobs@kosagi.com>
  */
 
 #include <linux/module.h>
@@ -43,7 +30,6 @@ MODULE_DEVICE_TABLE(of, es8328_of_match);
 
 static int es8328_i2c_probe(struct i2c_client *i2c)
 {
-	dev_info(&i2c->dev, "dev name:%s\n", i2c->dev.of_node->name);
 	return es8328_probe(&i2c->dev,
 			devm_regmap_init_i2c(i2c, &es8328_regmap_config));
 }

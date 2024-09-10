@@ -200,7 +200,7 @@ static int audio_info_show(struct seq_file *m, void *p)
 		return -EINVAL;
 	}
 
-	if (g_switch == 0) {
+ 	if (g_switch == 0) {
 		seq_printf(m, "The switch is not turned on, pls first turn on the switch.\n");
 		return 0;
 	}
@@ -353,10 +353,6 @@ static int audio_dev_mmap(struct file *file, struct vm_area_struct *vma)
 	const char *fileName = file->f_path.dentry->d_name.name;
 	enum DEVICES_ID deviceID = INVALID_DEVICE;
 	unsigned long size = vma->vm_end - vma->vm_start;
-
-	pr_info("audio_dev_mmap:%s\n", file->f_path.dentry->d_name.name);
-
-	pr_info("vma->vm_end:%ld,vma->vm_start:%ld\n",vma->vm_end, vma->vm_start);
 
 	if (size > (MAX_PERF_SIZE * sizeof(int32_t))) {
 		pr_err("audio_dev_mmap: size:%ld > %ld.\n", size, MAX_PERF_SIZE * sizeof(int32_t));

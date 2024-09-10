@@ -171,9 +171,6 @@ struct dmaengine_pcm {
 	const struct snd_dmaengine_pcm_config *config;
 	struct snd_soc_component component;
 	unsigned int flags;
-#ifdef CONFIG_SOC_SIFIVE_EIC7700
-	void *tmp_buf[2];
-#endif
 };
 
 static inline struct dmaengine_pcm *soc_component_to_pcm(struct snd_soc_component *p)
