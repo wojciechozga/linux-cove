@@ -205,6 +205,7 @@ ENTRY(_start_kernel)
 	li a7, COVE_PROMOTE_SBI_EXT_ID
 	li a6, COVE_PROMOTE_SBI_FID
 	mv a0, a1
+	la a1, __cove_tap_start
 	ecall
 	mv a0, s1
 	mv a1, s2

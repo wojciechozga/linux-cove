@@ -113,6 +113,18 @@ SECTIONS
 	}
 	__init_end = .;
 
+#ifdef CONFIG_RISCV_COVE_GUEST
+	. = ALIGN(4096);
+	.cove_tvm_attestation_payload : {
+		__cove_tap_start =  .;
+		LONG(0xace0ace0)
+		SHORT(0x0FFA)
+		FILL(0x00)
+       . += 4090;
+		__cove_tap_end =  .;
+	}
+#endif
+
 	/* Start of data section */
 	_sdata = .;
 	RO_DATA(SECTION_ALIGN)

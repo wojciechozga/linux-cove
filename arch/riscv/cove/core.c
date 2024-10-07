@@ -13,6 +13,8 @@
 #include <asm/sbi.h>
 #include <asm/cove.h>
 
+extern char __cove_tap_start[];
+
 static bool is_tvm;
 
 bool is_cove_guest(void)
