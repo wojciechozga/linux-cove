@@ -594,9 +594,9 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 
 	/*
 	 * Bind the vsfile here instead during the new vsfile allocation because
-	 * COVH bind call requires the TVM to be in finalized state.
+	 * COVI bind call requires the TVM to be in finalized state.
 	 */
-	if (tvcpuc->imsic.bind_required) {
+	if (kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA) && tvcpuc->imsic.bind_required) {
 		tvcpuc->imsic.bind_required = false;
 		rc = kvm_riscv_cove_vcpu_imsic_bind(vcpu, BIT(tvcpuc->imsic.vsfile_hgei));
 		if (rc) {
