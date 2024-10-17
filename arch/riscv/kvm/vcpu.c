@@ -730,8 +730,8 @@ long kvm_arch_vcpu_async_ioctl(struct file *filp,
 
 	if (ioctl == KVM_INTERRUPT) {
 		struct kvm_interrupt irq;
-		/* We do not support user space emulated IRQCHIP for TVMs yet */
-		if (is_cove_vcpu(vcpu))
+		/* We do not support user space emulated IRQCHIP for TVMs that utilize AIA yet */
+		if (is_cove_vcpu(vcpu) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			return -ENXIO;
 
 		if (copy_from_user(&irq, argp, sizeof(irq)))
@@ -1325,8 +1325,11 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 */
 		kvm_riscv_vcpu_flush_interrupts(vcpu);
 
-		/* Update HVIP CSR for current CPU only for non TVMs */
-		if (!is_cove_vcpu(vcpu))
+		/*
+		 * Do not update HVIP CSR for TVMs with AIA because AIA
+		 * provides alternative method to inject interrupts.
+		*/
+		if (!is_cove_vcpu(vcpu) || !kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			kvm_riscv_update_hvip(vcpu);
 
 		if (ret <= 0 ||
