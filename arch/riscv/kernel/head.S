@@ -205,6 +205,7 @@ ENTRY(_start_kernel)
 	li a7, 0x434F5648        /* SBI_EXT_COVH */
 	li a6, 0x15              /* SBI_EXT_COVH_PROMOTE_TO_TVM */
 	mv a0, a1                /* DTB physical address */
+	la a1, __cove_tap_start	 /* TAP physical address */
 	ecall
 	/* Attestation reflects the result of promotion, so ignore it */
 	mv a0, s0
