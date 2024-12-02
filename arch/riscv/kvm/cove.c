@@ -150,6 +150,11 @@ __always_inline bool kvm_riscv_cove_enabled(void)
 	return riscv_cove_enabled;
 }
 
+__always_inline bool kvm_riscv_cove_capability(unsigned long cap)
+{
+	return tinfo.capabilities & BIT(cap);
+}
+
 static void kvm_cove_imsic_clone(void *info)
 {
 	int rc;
