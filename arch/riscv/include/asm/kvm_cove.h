@@ -130,6 +130,16 @@ static inline bool is_cove_vcpu(struct kvm_vcpu *vcpu)
 	return is_cove_vm(vcpu->kvm);
 }
 
+static inline bool is_cove_vm_initializing(struct kvm *kvm)
+{
+	return is_cove_vm(kvm) && !kvm->arch.tvmc->finalized_done;
+}
+
+static inline bool is_cove_vm_finalized(struct kvm *kvm)
+{
+	return is_cove_vm(kvm) && kvm->arch.tvmc->finalized_done;
+}
+
 #ifdef CONFIG_RISCV_COVE_HOST
 
 bool kvm_riscv_cove_enabled(void);

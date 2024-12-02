@@ -68,7 +68,7 @@ void kvm_arch_destroy_vm(struct kvm *kvm)
 
 	kvm_riscv_aia_destroy_vm(kvm);
 
-	if (unlikely(is_cove_vm(kvm)))
+	if (unlikely(is_cove_vm_finalized(kvm)) || unlikely(is_cove_vm_initializing(kvm)))
 		kvm_riscv_cove_vm_destroy(kvm);
 }
 
@@ -232,7 +232,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 	switch (ioctl) {
 	case KVM_RISCV_COVE_MEASURE_REGION:
-		if (!is_cove_vm(kvm))
+		if (!is_cove_vm_initializing(kvm))
 			return -EINVAL;
 		if (copy_from_user(&mr, argp, sizeof(mr)))
 			return -EFAULT;
