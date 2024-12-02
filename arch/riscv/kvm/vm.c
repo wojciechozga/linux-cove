@@ -47,8 +47,15 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 			kvm_err("Unable to init CoVE VM because CoVE extension is not enabled\n");
 			return -EPERM;
 		}
-
 		r = kvm_riscv_cove_vm_multi_step_init(kvm);
+		if (r)
+			return r;
+	} else if (unlikely(type == KVM_VM_TYPE_RISCV_COVE_SINGLE_STEP_INIT)) {
+		if (!kvm_riscv_cove_enabled()) {
+			kvm_err("Unable to init CoVE VM because CoVE extension is not enabled\n");
+			return -EPERM;
+		}
+		r = kvm_riscv_cove_vm_single_step_init(kvm);
 		if (r)
 			return r;
 	}

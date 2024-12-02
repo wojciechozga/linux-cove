@@ -1003,7 +1003,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || is_cove_vm_single_step_initializing(vcpu->kvm)) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);
@@ -1067,7 +1067,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	kvm_riscv_vcpu_timer_save(vcpu);
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || is_cove_vm_single_step_initializing(vcpu->kvm)) {
 		/**
 		 * For TVMs, we don't need a separate case as TSM only updates
 		 * the required CSRs during the world switch. All other CSR
@@ -1126,6 +1126,8 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 			 * as the TSM is expected track the tlb version and issue
 			 * hfence when vcpu is scheduled again.
 			 */
+			kvm_clear_request(KVM_REQ_HFENCE_GVMA_VMID_ALL, vcpu);
+			kvm_clear_request(KVM_REQ_HFENCE, vcpu);
 			return;
 		}
 
