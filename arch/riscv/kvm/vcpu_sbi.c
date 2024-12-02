@@ -38,6 +38,11 @@ static const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_covg = {
 	.extid_end = -1UL,
 	.handler = NULL,
 };
+static const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_covh = {
+	.extid_start = -1UL,
+	.extid_end = -1UL,
+	.handler = NULL,
+};
 #endif
 
 struct kvm_riscv_sbi_extension_entry {
@@ -93,6 +98,10 @@ static const struct kvm_riscv_sbi_extension_entry sbi_ext[] = {
 	{
 		.dis_idx = KVM_RISCV_SBI_EXT_COVG,
 		.ext_ptr = &vcpu_sbi_ext_covg,
+	},
+	{
+		.dis_idx = KVM_RISCV_SBI_EXT_COVH,
+		.ext_ptr = &vcpu_sbi_ext_covh,
 	},
 };
 
