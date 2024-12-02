@@ -342,10 +342,18 @@ void kvm_riscv_vcpu_timer_sync(struct kvm_vcpu *vcpu)
 		return;
 
 #if defined(CONFIG_32BIT)
-	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
-	t->next_cycles |= (u64)nacl_csr_read(CSR_VSTIMECMPH) << 32;
+	if (is_cove_vcpu(vcpu)) {
+		t->next_cycles = nacl_shmem_csr_read(nacl_shmem(), CSR_VSTIMECMP);
+		t->next_cycles |= (u64)nacl_shmem_csr_read(nacl_shmem(), CSR_VSTIMECMPH) << 32;
+	} else {
+		t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
+		t->next_cycles |= (u64)nacl_csr_read(CSR_VSTIMECMPH) << 32;
+	}
 #else
-	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
+	if (is_cove_vcpu(vcpu))
+		t->next_cycles = nacl_shmem_csr_read(nacl_shmem(), CSR_VSTIMECMP);
+	else
+		t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
 #endif
 }
 
