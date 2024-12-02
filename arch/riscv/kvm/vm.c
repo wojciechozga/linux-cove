@@ -42,17 +42,22 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 		return r;
 	}
 
-	if (unlikely(type == KVM_VM_TYPE_RISCV_COVE)) {
+	if (unlikely(type == KVM_VM_TYPE_RISCV_COVE_MULTI_STEP_INIT)) {
 		if (!kvm_riscv_cove_enabled()) {
-			kvm_err("Unable to init CoVE VM because cove is not enabled\n");
+			kvm_err("Unable to init CoVE VM because CoVE extension is not enabled\n");
 			return -EPERM;
 		}
 
-		r = kvm_riscv_cove_vm_init(kvm);
+		if (kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_PROMOTE_TVM)) {
+			r = kvm_riscv_cove_vm_single_step_init(kvm);
+		} else {
+			r = kvm_riscv_cove_vm_multi_step_init(kvm);
+		}
 		if (r)
 			return r;
+
 		kvm->arch.vm_type = type;
-		kvm_info("Trusted VM instance init successful\n");
+		kvm_info("CoVE VM multi-step creation process initialized successfully\n");
 	}
 
 	kvm_riscv_aia_init_vm(kvm);
@@ -68,7 +73,7 @@ void kvm_arch_destroy_vm(struct kvm *kvm)
 
 	kvm_riscv_aia_destroy_vm(kvm);
 
-	if (unlikely(is_cove_vm(kvm)))
+	if (unlikely(is_cove_vm_finalized(kvm)) || unlikely(is_cove_vm_multi_step_initalizing(kvm)))
 		kvm_riscv_cove_vm_destroy(kvm);
 }
 
@@ -232,7 +237,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 	switch (ioctl) {
 	case KVM_RISCV_COVE_MEASURE_REGION:
-		if (!is_cove_vm(kvm))
+		if (!is_cove_vm_multi_step_initalizing(kvm))
 			return -EINVAL;
 		if (copy_from_user(&mr, argp, sizeof(mr)))
 			return -EFAULT;

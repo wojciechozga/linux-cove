@@ -223,7 +223,7 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	 * TODO: Ideally it should be invoked in vcpu_create. but vcpu_idx
 	 * is allocated after returning create_vcpu. Find a better place to do it
 	 */
-	if (unlikely(is_cove_vcpu(vcpu))) {
+	if (unlikely(is_cove_vm_initializing(vcpu->kvm))) {
 		rc = kvm_riscv_cove_vcpu_init(vcpu);
 		if (rc)
 			pr_err("%s: cove vcpu init failed %d\n", __func__, rc);
@@ -248,7 +248,7 @@ void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)
 
 	kvm_riscv_vcpu_pmu_deinit(vcpu);
 
-	if (unlikely(is_cove_vcpu(vcpu)))
+	if (unlikely(is_cove_vm_finalized(vcpu->kvm) || unlikely(is_cove_vm_initializing(vcpu->kvm))))
 		kvm_riscv_cove_vcpu_destroy(vcpu);
 
 	/* Free unused pages pre-allocated for G-stage page table mappings */
@@ -731,7 +731,7 @@ long kvm_arch_vcpu_async_ioctl(struct file *filp,
 	if (ioctl == KVM_INTERRUPT) {
 		struct kvm_interrupt irq;
 		/* We do not support user space emulated IRQCHIP for TVMs that utilize AIA yet */
-		if (is_cove_vcpu(vcpu) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
+		if (is_cove_vm_finalized(vcpu->kvm) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			return -ENXIO;
 
 		if (copy_from_user(&irq, argp, sizeof(irq)))
@@ -992,7 +992,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	u64 henvcfg = kvm_riscv_vcpu_get_henvcfg(vcpu->arch.isa);
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
-	if (is_cove_vcpu(vcpu)) {
+	if (is_cove_vm_finalized(vcpu->kvm)) {
 		kvm_riscv_cove_vcpu_load(vcpu);
 		goto skip_load;
 	}
@@ -1048,7 +1048,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	vcpu->cpu = -1;
 
-	if (is_cove_vcpu(vcpu)) {
+	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_multi_step_initalizing(vcpu->kvm)) {
 		kvm_riscv_cove_vcpu_put(vcpu);
 		return;
 	}
@@ -1114,7 +1114,7 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 		if (kvm_check_request(KVM_REQ_VCPU_RESET, vcpu))
 			kvm_riscv_reset_vcpu(vcpu);
 
-		if (is_cove_vcpu(vcpu)) {
+		if (is_cove_vm_finalized(vcpu->kvm)) {
 			/*
 			 * KVM doesn't need to do anything special here
 			 * as the TSM is expected track the tlb version and issue
@@ -1218,7 +1218,7 @@ static void noinstr kvm_riscv_vcpu_enter_exit(struct kvm_vcpu *vcpu,
 
 		trap->htval = nacl_shmem_csr_read(nshmem, CSR_HTVAL);
 		trap->htinst = nacl_shmem_csr_read(nshmem, CSR_HTINST);
-	} else if (is_cove_vcpu(vcpu)) {
+	} else if (is_cove_vm(vcpu->kvm)) {
 		nshmem = nacl_shmem();
 		kvm_riscv_cove_vcpu_switchto(vcpu, trap);
 
@@ -1329,7 +1329,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 * Do not update HVIP CSR for TVMs with AIA because AIA
 		 * provides alternative method to inject interrupts.
 		*/
-		if (!is_cove_vcpu(vcpu) || !kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
+		if (!is_cove_vm(vcpu->kvm) || !kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			kvm_riscv_update_hvip(vcpu);
 
 		if (ret <= 0 ||

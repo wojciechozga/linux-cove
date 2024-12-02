@@ -105,7 +105,7 @@ static int aia_config(struct kvm *kvm, unsigned long type,
 				return -EINVAL;
 			};
 			/* TVM must have a physical vs file */
-			if (is_cove_vm(kvm) && *nr != KVM_DEV_RISCV_AIA_MODE_HWACCEL)
+			if (is_cove_vm_initializing(kvm) && *nr != KVM_DEV_RISCV_AIA_MODE_HWACCEL)
 				return -EINVAL;
 
 			aia->mode = *nr;
@@ -269,7 +269,7 @@ static int aia_init(struct kvm *kvm)
 	if (kvm->created_vcpus != atomic_read(&kvm->online_vcpus))
 		return -EBUSY;
 
-	if (!is_cove_vm(kvm)) {
+	if (!is_cove_vm_initializing(kvm)) {
 		/* Number of sources should be less than or equals number of IDs */
 		if (aia->nr_ids < aia->nr_sources)
 			return -EINVAL;
@@ -661,7 +661,7 @@ void kvm_riscv_aia_init_vm(struct kvm *kvm)
 	 */
 
 	/* Initialize default values in AIA global context */
-	if (is_cove_vm(kvm)) {
+	if (is_cove_vm_initializing(kvm)) {
 		if (!kvm_riscv_aia_nr_hgei)
 			return;
 		aia->mode = KVM_DEV_RISCV_AIA_MODE_HWACCEL;
