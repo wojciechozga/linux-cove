@@ -169,7 +169,7 @@ void kvm_riscv_local_tlb_sanitize(struct kvm_vcpu *vcpu)
 {
 	unsigned long vmid;
 
-	if (is_cove_vcpu(vcpu) || !kvm_riscv_gstage_vmid_bits() ||
+	if (is_cove_vm(vcpu->kvm) || !kvm_riscv_gstage_vmid_bits() ||
 	    vcpu->arch.last_exit_cpu == vcpu->cpu)
 		return;
 

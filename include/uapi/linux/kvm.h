@@ -919,7 +919,7 @@ struct kvm_ppc_resize_hpt {
  * RISCV-V Confidential VM type. The large bit shift is chosen on purpose
  * to allow other architectures to have their specific VM types if required.
  */
-#define KVM_VM_TYPE_RISCV_COVE	(1UL << 9)
+#define KVM_VM_TYPE_RISCV_COVE_MULTI_STEP_INIT	(1UL << 9)
 /*
  * ioctls for /dev/kvm fds:
  */

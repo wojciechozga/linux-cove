@@ -122,12 +122,28 @@ struct kvm_cove_tvm_context {
 
 static inline bool is_cove_vm(struct kvm *kvm)
 {
-	return kvm->arch.vm_type == KVM_VM_TYPE_RISCV_COVE;
+	return kvm->arch.vm_type == KVM_VM_TYPE_RISCV_COVE_MULTI_STEP_INIT;
 }
 
 static inline bool is_cove_vcpu(struct kvm_vcpu *vcpu)
 {
 	return is_cove_vm(vcpu->kvm);
+}
+
+static inline bool is_cove_vm_initializing(struct kvm *kvm)
+{
+	return is_cove_vm(kvm) && !kvm->arch.tvmc->finalized_done;
+}
+
+static inline bool is_cove_vm_multi_step_initializing(struct kvm *kvm)
+{
+	return kvm->arch.vm_type == KVM_VM_TYPE_RISCV_COVE_MULTI_STEP_INIT && \
+	       !kvm->arch.tvmc->finalized_done;
+}
+
+static inline bool is_cove_vm_finalized(struct kvm *kvm)
+{
+	return is_cove_vm(kvm) && kvm->arch.tvmc->finalized_done;
 }
 
 #ifdef CONFIG_RISCV_COVE_HOST
@@ -138,7 +154,7 @@ int kvm_riscv_cove_init(void);
 
 /* TVM related functions */
 void kvm_riscv_cove_vm_destroy(struct kvm *kvm);
-int kvm_riscv_cove_vm_init(struct kvm *kvm);
+int kvm_riscv_cove_vm_multi_step_init(struct kvm *kvm);
 
 /* TVM VCPU related functions */
 void kvm_riscv_cove_vcpu_destroy(struct kvm_vcpu *vcpu);
@@ -173,7 +189,7 @@ static inline int kvm_riscv_cove_hardware_enable(void) {return 0; }
 
 /* TVM related functions */
 static inline void kvm_riscv_cove_vm_destroy(struct kvm *kvm) {}
-static inline int kvm_riscv_cove_vm_init(struct kvm *kvm) {return -1; }
+static inline int kvm_riscv_cove_vm_multi_step_init(struct kvm *kvm) { return -1; }
 
 /* TVM VCPU related functions */
 static inline void kvm_riscv_cove_vcpu_destroy(struct kvm_vcpu *vcpu) {}
