@@ -130,6 +130,10 @@ static inline bool is_cove_vcpu(struct kvm_vcpu *vcpu)
 	return is_cove_vm(vcpu->kvm);
 }
 
+static inline bool is_cove_vm_finalized(struct kvm *kvm) {
+	return is_cove_vm(kvm) && kvm->arch.tvmc->finalized_done;
+}
+
 #ifdef CONFIG_RISCV_COVE_HOST
 
 bool kvm_riscv_cove_enabled(void);
@@ -211,5 +215,11 @@ static inline int kvm_riscv_cove_vcpu_imsic_addr(struct kvm_vcpu *vcpu) { return
 static inline int kvm_riscv_cove_vcpu_imsic_rebind(struct kvm_vcpu *vcpu,
 						   int old_pcpu) { return -1; }
 #endif /* CONFIG_RISCV_COVE_HOST */
+
+static inline bool is_cove_vm_multi_step_init(struct kvm *kvm)
+{
+	return is_cove_vm(kvm) && !is_cove_vm_finalized(kvm) && \
+	       !kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_PROMOTE_TVM);
+}
 
 #endif /* __KVM_RISCV_COVE_H */

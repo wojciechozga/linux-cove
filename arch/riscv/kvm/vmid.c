@@ -78,7 +78,7 @@ void kvm_riscv_gstage_vmid_update(struct kvm_vcpu *vcpu)
 	struct kvm_vmid *vmid = &vcpu->kvm->arch.vmid;
 
 	/* No VMID management for TVMs by the host */
-	if (is_cove_vcpu(vcpu))
+	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_multi_step_init(vcpu->kvm))
 		return;
 
 	if (!kvm_riscv_gstage_vmid_ver_changed(kvm))

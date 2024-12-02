@@ -731,7 +731,7 @@ long kvm_arch_vcpu_async_ioctl(struct file *filp,
 	if (ioctl == KVM_INTERRUPT) {
 		struct kvm_interrupt irq;
 		/* We do not support user space emulated IRQCHIP for TVMs that utilize AIA yet */
-		if (is_cove_vcpu(vcpu) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
+		if (is_cove_vm_finalized(vcpu->kvm) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
 			return -ENXIO;
 
 		if (copy_from_user(&irq, argp, sizeof(irq)))
@@ -992,7 +992,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	u64 henvcfg = kvm_riscv_vcpu_get_henvcfg(vcpu->arch.isa);
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
-	if (is_cove_vcpu(vcpu)) {
+	if (is_cove_vm_finalized(vcpu->kvm)) {
 		kvm_riscv_cove_vcpu_load(vcpu);
 		goto skip_load;
 	}
@@ -1048,7 +1048,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	vcpu->cpu = -1;
 
-	if (is_cove_vcpu(vcpu)) {
+	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_multi_step_init(vcpu->kvm)) {
 		kvm_riscv_cove_vcpu_put(vcpu);
 		return;
 	}
@@ -1114,7 +1114,7 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 		if (kvm_check_request(KVM_REQ_VCPU_RESET, vcpu))
 			kvm_riscv_reset_vcpu(vcpu);
 
-		if (is_cove_vcpu(vcpu)) {
+		if (is_cove_vm_finalized(vcpu->kvm)) {
 			/*
 			 * KVM doesn't need to do anything special here
 			 * as the TSM is expected track the tlb version and issue
