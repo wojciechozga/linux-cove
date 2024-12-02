@@ -658,6 +658,13 @@ config RISCV_COVE_GUEST
 	help
 	  Enables support for running TVMs on platforms supporting CoVE.
 
+config RISCV_COVE_GUEST_EMBEDDED_TAP
+	bool "Guest Support for embedded TVM Attestation Payload (TAP)"
+	default n
+	select RISCV_COVE_GUEST
+	help
+	   Creates placeholder in the kernel image to embed TAP.
+
 endmenu # "Confidential VM Extension(CoVE) Support"
 
 endmenu # "Platform type"
