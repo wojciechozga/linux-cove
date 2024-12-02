@@ -532,7 +532,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (unlikely(kvm_riscv_cove_enabled()) || kvm_riscv_nacl_sync_csr_available()) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);
@@ -603,7 +603,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 					 vcpu->arch.isa);
 	kvm_riscv_vcpu_host_vector_restore(&vcpu->arch.host_context);
 
-	if (kvm_riscv_nacl_available()) {
+	if (kvm_riscv_nacl_sync_csr_available()) {
 		/**
 		 * For TVMs, we don't need a separate case as TSM only updates
 		 * the required CSRs during the world switch. All other CSR
