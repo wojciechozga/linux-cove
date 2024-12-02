@@ -587,7 +587,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	vcpu->cpu = -1;
 
-	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_initializing(vcpu->kvm)) {
+	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_multi_step_initializing(vcpu->kvm)) {
 		kvm_riscv_cove_vcpu_put(vcpu);
 		return;
 	}
