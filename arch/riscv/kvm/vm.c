@@ -44,15 +44,15 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 
 	if (unlikely(type == KVM_VM_TYPE_RISCV_COVE)) {
 		if (!kvm_riscv_cove_enabled()) {
-			kvm_err("Unable to init CoVE VM because cove is not enabled\n");
+			kvm_err("Unable to init CoVE VM because CoVE extension is not enabled\n");
 			return -EPERM;
 		}
 
-		r = kvm_riscv_cove_vm_init(kvm);
+		r = kvm_riscv_cove_vm_multi_step_init(kvm);
 		if (r)
 			return r;
 		kvm->arch.vm_type = type;
-		kvm_info("Trusted VM instance init successful\n");
+		kvm_info("CoVE VM instance init successful\n");
 	}
 
 	kvm_riscv_aia_init_vm(kvm);
