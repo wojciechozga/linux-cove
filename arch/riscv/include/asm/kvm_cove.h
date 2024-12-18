@@ -92,6 +92,9 @@ struct kvm_cove_tvm_context {
 	/* TODO: This is not really a VMID as TSM returns the page owner ID instead of VMID */
 	unsigned long tvm_guest_id;
 
+	/* Address of TVM Attestation Payload (TAP) */
+	unsigned long cove_tap_addr;
+
 	/* Pages where TVM page table is stored */
 	struct kvm_riscv_cove_page pgtable;
 

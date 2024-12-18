@@ -625,7 +625,8 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 		if (is_cove_vm_multi_step_initializing(vcpu->kvm)) {
 			rc = sbi_covh_tsm_finalize_tvm(tvmc->tvm_guest_id, cntx->sepc, cntx->a1);
 		} else if (is_cove_vm_single_step_initializing(vcpu->kvm)) {
-			rc = sbi_covh_tsm_promote_to_tvm(cntx->a1, 0, cntx->sepc, &tvmc->tvm_guest_id);
+			rc = sbi_covh_tsm_promote_to_tvm(cntx->a1, tvmc->cove_tap_addr, cntx->sepc,
+							 &tvmc->tvm_guest_id);
 		} else {
 			rc = -EOPNOTSUPP;
 		}
@@ -765,6 +766,9 @@ int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm, struct kvm_riscv_cove_measu
 		kvm_err("measured_mr pages can not be added after finalize\n");
 		return -EINVAL;
 	}
+
+	if (mr->type == KVM_RISCV_COVE_REGION_COVE_TAP)
+		tvmc->cove_tap_addr = mr->gpa;
 
 	num_pages = bytes_to_pages(mr->size);
 

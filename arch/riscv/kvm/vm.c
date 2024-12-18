@@ -237,8 +237,6 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 	switch (ioctl) {
 	case KVM_RISCV_COVE_MEASURE_REGION:
-		if (!is_cove_vm_multi_step_initializing(kvm))
-			return -EINVAL;
 		if (copy_from_user(&mr, argp, sizeof(mr)))
 			return -EFAULT;
 
