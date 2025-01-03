@@ -855,7 +855,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 			preempt_enable();
 			continue;
 		}
-		preempt_enable();
+		// preempt_enable();
 
 		local_irq_disable();
 

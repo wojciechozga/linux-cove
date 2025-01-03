@@ -96,11 +96,11 @@ static const struct kvm_riscv_sbi_extension_entry sbi_ext[] = {
 		.ext_ptr = &vcpu_sbi_ext_vendor,
 	},
 	{
-		.dis_idx = KVM_RISCV_SBI_EXT_COVG,
+		.ext_idx = KVM_RISCV_SBI_EXT_COVG,
 		.ext_ptr = &vcpu_sbi_ext_covg,
 	},
 	{
-		.dis_idx = KVM_RISCV_SBI_EXT_COVH,
+		.ext_idx = KVM_RISCV_SBI_EXT_COVH,
 		.ext_ptr = &vcpu_sbi_ext_covh,
 	},
 };

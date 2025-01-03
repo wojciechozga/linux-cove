@@ -489,7 +489,7 @@ static int kvm_riscv_cove_gstage_map(struct kvm_vcpu *vcpu, gpa_t gpa,
 		return -ENOMEM;
 
 	mmap_read_lock(mm);
-	rc = pin_user_pages(hva, 1, flags, &page, NULL);
+	rc = pin_user_pages(hva, 1, flags, &page);
 	mmap_read_unlock(mm);
 
 	if (rc == -EHWPOISON) {

@@ -406,88 +406,91 @@ int kvm_riscv_aia_alloc_hgei(int cpu, struct kvm_vcpu *owner,
 	struct aia_hgei_control *hgctrl = per_cpu_ptr(&aia_hgei, cpu);
 	phys_addr_t imsic_hgei_pa;
 
-	if (!kvm_riscv_aia_available() || !hgctrl)
-		return -ENODEV;
+	printk("ACE merge problem");
+	return -ENODEV;
 
-	lc = imsic_get_local_config(cpu);
-	raw_spin_lock_irqsave(&hgctrl->lock, flags);
+// 	if (!kvm_riscv_aia_available() || !hgctrl)
+// 		return -ENODEV;
 
-	if (!hgctrl->free_bitmap) {
-		raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
-		goto done;
-	}
+// 	lc = imsic_get_local_config(cpu);
+// 	raw_spin_lock_irqsave(&hgctrl->lock, flags);
 
-	if (!is_cove_vcpu(owner)) {
-		/* Find a free one that is not converted */
-		tmp_bitmap = hgctrl->free_bitmap & hgctrl->nconf_bitmap;
-		if (tmp_bitmap > 0)
-			ret = __ffs(tmp_bitmap);
-		else {
-			/* All free ones have been converted in the past. Reclaim one now */
-			ret = __ffs(hgctrl->free_bitmap);
-			reclaim_needed = true;
-		}
-	} else {
-		/* First try to find a free one that is already converted */
-		tmp_bitmap = hgctrl->free_bitmap & !hgctrl->nconf_bitmap;
-		if (tmp_bitmap > 0)
-			ret = __ffs(tmp_bitmap);
-		else
-			ret = __ffs(hgctrl->free_bitmap);
-	}
+// 	if (!hgctrl->free_bitmap) {
+// 		raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
+// 		goto done;
+// 	}
 
-	hgctrl->free_bitmap &= ~BIT(ret);
-	hgctrl->owners[ret] = owner;
-	raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
+// 	if (!is_cove_vcpu(owner)) {
+// 		/* Find a free one that is not converted */
+// 		tmp_bitmap = hgctrl->free_bitmap & hgctrl->nconf_bitmap;
+// 		if (tmp_bitmap > 0)
+// 			ret = __ffs(tmp_bitmap);
+// 		else {
+// 			/* All free ones have been converted in the past. Reclaim one now */
+// 			ret = __ffs(hgctrl->free_bitmap);
+// 			reclaim_needed = true;
+// 		}
+// 	} else {
+// 		/* First try to find a free one that is already converted */
+// 		tmp_bitmap = hgctrl->free_bitmap & !hgctrl->nconf_bitmap;
+// 		if (tmp_bitmap > 0)
+// 			ret = __ffs(tmp_bitmap);
+// 		else
+// 			ret = __ffs(hgctrl->free_bitmap);
+// 	}
 
-	if (lc && ret > 0) {
-		if (hgei_va)
-			*hgei_va = lc->msi_va + (ret * IMSIC_MMIO_PAGE_SZ);
-		imsic_hgei_pa = lc->msi_pa + (ret * IMSIC_MMIO_PAGE_SZ);
+// 	hgctrl->free_bitmap &= ~BIT(ret);
+// 	hgctrl->owners[ret] = owner;
+// 	raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
 
-		if (reclaim_needed) {
-			rc = kvm_riscv_cove_aia_claim_imsic(owner, imsic_hgei_pa);
-			if (rc) {
-				kvm_err("Reclaim of imsic pa %pa failed for vcpu %d pcpu %d ret %d\n",
-					&imsic_hgei_pa, owner->vcpu_idx, smp_processor_id(), ret);
-				kvm_riscv_aia_free_hgei(cpu, ret);
-				return rc;
-			}
-		}
+// 	if (lc && ret > 0) {
+// 		if (hgei_va)
+// 			*hgei_va = lc->msi_va + (ret * IMSIC_MMIO_PAGE_SZ);
+// 		imsic_hgei_pa = lc->msi_pa + (ret * IMSIC_MMIO_PAGE_SZ);
 
-		/*
-		 * Clear the free_bitmap here instead in case relcaim was necessary.
-		 * Do it here instead of above because it we should only set the nconf
-		 * bitmap after the claim is successful.
-		 */
-		raw_spin_lock_irqsave(&hgctrl->lock, flags);
-		if (reclaim_needed)
-			set_bit(ret, &hgctrl->nconf_bitmap);
-		raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
+// 		if (reclaim_needed) {
+// 			rc = kvm_riscv_cove_aia_claim_imsic(owner, imsic_hgei_pa);
+// 			if (rc) {
+// 				kvm_err("Reclaim of imsic pa %pa failed for vcpu %d pcpu %d ret %d\n",
+// 					&imsic_hgei_pa, owner->vcpu_idx, smp_processor_id(), ret);
+// 				kvm_riscv_aia_free_hgei(cpu, ret);
+// 				return rc;
+// 			}
+// 		}
 
-		if (is_cove_vcpu(owner) && test_bit(ret, &hgctrl->nconf_bitmap)) {
-			/*
-			 * Convert the address to confidential mode.
-			 * This may need to send IPIs to issue global fence. Hence,
-			 * enable interrupts temporarily for irq processing
-			 */
-			rc = kvm_riscv_cove_aia_convert_imsic(owner, imsic_hgei_pa);
+// 		/*
+// 		 * Clear the free_bitmap here instead in case relcaim was necessary.
+// 		 * Do it here instead of above because it we should only set the nconf
+// 		 * bitmap after the claim is successful.
+// 		 */
+// 		raw_spin_lock_irqsave(&hgctrl->lock, flags);
+// 		if (reclaim_needed)
+// 			set_bit(ret, &hgctrl->nconf_bitmap);
+// 		raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
 
-			if (rc) {
-				kvm_riscv_aia_free_hgei(cpu, ret);
-				ret = rc;
-			} else {
-				raw_spin_lock_irqsave(&hgctrl->lock, flags);
-				clear_bit(ret, &hgctrl->nconf_bitmap);
-				raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
-			}
-		}
-	}
+// 		if (is_cove_vcpu(owner) && test_bit(ret, &hgctrl->nconf_bitmap)) {
+// 			/*
+// 			 * Convert the address to confidential mode.
+// 			 * This may need to send IPIs to issue global fence. Hence,
+// 			 * enable interrupts temporarily for irq processing
+// 			 */
+// 			rc = kvm_riscv_cove_aia_convert_imsic(owner, imsic_hgei_pa);
 
-	if (hgei_pa)
-		*hgei_pa = imsic_hgei_pa;
-done:
-	return ret;
+// 			if (rc) {
+// 				kvm_riscv_aia_free_hgei(cpu, ret);
+// 				ret = rc;
+// 			} else {
+// 				raw_spin_lock_irqsave(&hgctrl->lock, flags);
+// 				clear_bit(ret, &hgctrl->nconf_bitmap);
+// 				raw_spin_unlock_irqrestore(&hgctrl->lock, flags);
+// 			}
+// 		}
+// 	}
+
+// 	if (hgei_pa)
+// 		*hgei_pa = imsic_hgei_pa;
+// done:
+// 	return ret;
 }
 
 void kvm_riscv_aia_free_hgei(int cpu, int hgei)
@@ -681,8 +684,9 @@ int kvm_riscv_aia_init(void)
 {
 	int rc;
 
-	if (!riscv_isa_extension_available(NULL, SxAIA))
-		return -ENODEV;
+	return -ENODEV;
+	// if (!riscv_isa_extension_available(NULL, SxAIA))
+	// 	return -ENODEV;
 
 	/* Figure-out number of bits in HGEIE */
 	csr_write(CSR_HGEIE, -1UL);

@@ -75,7 +75,7 @@ static int cove_share_page(struct kvm_vcpu *vcpu, gpa_t gpa,
 		return -ENOMEM;
 
 	mmap_read_lock(mm);
-	rc = pin_user_pages(hva, 1, FOLL_LONGTERM | FOLL_WRITE, &page, NULL);
+	rc = pin_user_pages(hva, 1, FOLL_LONGTERM | FOLL_WRITE, &page);
 	mmap_read_unlock(mm);
 
 	if (rc != 1) {
@@ -219,15 +219,8 @@ static int kvm_sbi_ext_covg_handler(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	}
 }
 
-unsigned long kvm_sbi_ext_covg_probe(struct kvm_vcpu *vcpu)
-{
-	/* KVM COVG SBI handler is only meant for handling calls from TSM */
-	return 0;
-}
-
 const struct kvm_vcpu_sbi_extension vcpu_sbi_ext_covg = {
 	.extid_start = SBI_EXT_COVG,
 	.extid_end = SBI_EXT_COVG,
 	.handler = kvm_sbi_ext_covg_handler,
-	.probe = kvm_sbi_ext_covg_probe,
 };
