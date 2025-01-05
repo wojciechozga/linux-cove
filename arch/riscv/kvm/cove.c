@@ -615,6 +615,7 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 			return;
 		}
 		tvmc->finalized_done = true;
+		kvm_info("CoVE Guest creation successful with guest id %lx\n", tvmc->tvm_guest_id);
 	}
 
 	/*

@@ -39,6 +39,8 @@ static void sbi_dbcn_console_write_cove(struct console *con, const char *s,
 	phys_addr_t pa = __pa(dbcn_buf);
 	unsigned int off = 0;
 
+	pr_warn("ACE %s: sbi_dbcn_console_write_cove\n", __func__);
+
 	while (off < n) {
 		const unsigned int rem = n - off;
 		const unsigned int size =
@@ -79,15 +81,19 @@ static int __init early_sbi_setup(struct earlycon_device *device,
 	int ret = 0;
 
 	/* TODO: Check for SBI debug console (DBCN) extension */
+	pr_warn("ACE %s: early_sbi_setup\n", __func__);
 	if ((sbi_spec_version >= sbi_mk_version(1, 0)) &&
 	    (sbi_probe_extension(SBI_EXT_DBCN) > 0)) {
 #ifdef CONFIG_RISCV_COVE_GUEST
+		pr_warn("ACE %s: early_sbi_setup 2\n", __func__);
 		if (is_cove_guest()) {
+			pr_warn("ACE %s: early_sbi_setup 3\n", __func__);
 			ret = sbi_covg_share_memory(__pa(dbcn_buf),
 						    DBCN_BOUNCE_BUF_SIZE);
 			if (ret)
 				return ret;
 
+			pr_warn("ACE %s: early_sbi_setup 4\n", __func__);
 			device->con->write = sbi_dbcn_console_write_cove;
 			return 0;
 		}
