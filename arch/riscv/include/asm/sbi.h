@@ -31,13 +31,10 @@ enum sbi_ext_id {
 	SBI_EXT_SRST = 0x53525354,
 	SBI_EXT_PMU = 0x504D55,
 	SBI_EXT_DBCN = 0x4442434E,
-<<<<<<< HEAD
 	SBI_EXT_NACL = 0x4E41434C,
 	SBI_EXT_COVH = 0x434F5648,
 	SBI_EXT_COVI = 0x434F5649,
 	SBI_EXT_COVG = 0x434F5647,
-=======
->>>>>>> 835b6aba84c1 (RISC-V: Add defines for SBI debug console extension)
 
 	/* Experimentals extensions must lie within this range */
 	SBI_EXT_EXPERIMENTAL_START = 0x08000000,

@@ -61,20 +61,21 @@ static void sbi_dbcn_console_write_cove(struct console *con, const char *s,
 }
 #endif
 
-static void sbi_dbcn_console_write(struct console *con,
-				   const char *s, unsigned n)
-{
-	phys_addr_t pa = __pa(s);
+// static void sbi_dbcn_console_write(struct console *con,
+// 				   const char *s, unsigned n)
+// {
+// 	phys_addr_t pa = __pa(s);
 
-	sbi_ecall(SBI_EXT_DBCN, SBI_EXT_DBCN_CONSOLE_WRITE,
-#ifdef CONFIG_32BIT
-		  n, pa, (u64)pa >> 32,
-#else
-		  n, pa, 0,
-#endif
-		  0, 0, 0);
-}
+// 	sbi_ecall(SBI_EXT_DBCN, SBI_EXT_DBCN_CONSOLE_WRITE,
+// #ifdef CONFIG_32BIT
+// 		  n, pa, (u64)pa >> 32,
+// #else
+// 		  n, pa, 0,
+// #endif
+// 		  0, 0, 0);
+// }
 
+// ACE possible
 static void sbi_dbcn_console_write(struct console *con,
 				   const char *s, unsigned int n)
 {
