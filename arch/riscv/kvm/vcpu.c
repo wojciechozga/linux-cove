@@ -368,13 +368,19 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	/* Read current HVIP and VSIE CSRs */
-	csr->vsie = nacl_csr_read(CSR_VSIE);
+	if (kvm_riscv_nacl_sync_csr_available()) {
+		csr->vsie = nacl_csr_read(CSR_VSIE);
+		/*
+		* Sync-up HVIP.VSSIP bit changes does by Guest. For TVMs,
+		* the HVIP is not updated by the TSM. Expect it to be zero.
+		*/
+		hvip = nacl_csr_read(CSR_HVIP);
+	} else {
+		csr->vsie = csr_read(CSR_VSIE);
+		hvip = csr_read(CSR_HVIP);
+	}
 
-	/*
-	 * Sync-up HVIP.VSSIP bit changes does by Guest. For TVMs,
-	 * the HVIP is not updated by the TSM. Expect it to be zero.
-	 */
-	hvip = nacl_csr_read(CSR_HVIP);
+
 	if ((csr->hvip ^ hvip) & (1UL << IRQ_VS_SOFT)) {
 		if (hvip & (1UL << IRQ_VS_SOFT)) {
 			if (!test_and_set_bit(IRQ_VS_SOFT,
@@ -701,7 +707,11 @@ static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
-	nacl_csr_write(CSR_HVIP, csr->hvip);
+	if (kvm_riscv_nacl_sync_csr_available()) {
+		nacl_csr_write(CSR_HVIP, csr->hvip);
+	} else {
+		csr_write(CSR_HVIP, csr->hvip);
+	}
 	kvm_riscv_vcpu_aia_update_hvip(vcpu);
 }
 

@@ -678,6 +678,14 @@ void __init sbi_init(void)
 			pr_info("SBI DBCN extension detected\n");
 			sbi_debug_console_available = true;
 		}
+		pr_info("check for cove\n");
+		if (sbi_probe_extension(SBI_EXT_COVH) > 0) {
+			pr_info("SBI COVH extension detected\n");
+		}
+
+		if (sbi_probe_extension(SBI_EXT_NACL) > 0) {
+			pr_info("SBI NACL extension detected\n");
+		}
 	} else {
 		__sbi_set_timer = __sbi_set_timer_v01;
 		__sbi_send_ipi	= __sbi_send_ipi_v01;

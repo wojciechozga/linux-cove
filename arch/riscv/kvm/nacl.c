@@ -117,13 +117,16 @@ int kvm_riscv_nacl_init(void)
 	struct page *shmem_page;
 	struct kvm_riscv_nacl *nacl;
 
+	kvm_info("kvm_riscv_nacl_init\n");
 	if ((sbi_spec_version < sbi_mk_version(1, 0)) ||
 	    sbi_probe_extension(SBI_EXT_NACL) <= 0)
 		return -ENODEV;
 
+	kvm_info("kvm_riscv_nacl_init 2\n");
 	/* Enable NACL support */
 	static_branch_enable(&kvm_riscv_nacl_available);
 
+	kvm_info("kvm_riscv_nacl_init 3\n");
 	/* Probe NACL features */
 	if (nacl_probe_feature(SBI_NACL_FEAT_SYNC_CSR))
 		static_branch_enable(&kvm_riscv_nacl_sync_csr_available);

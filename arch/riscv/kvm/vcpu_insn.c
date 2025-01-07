@@ -480,6 +480,7 @@ int kvm_riscv_vcpu_mmio_load(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	struct kvm_cpu_trap utrap = { 0 };
 	struct kvm_cpu_context *ct = &vcpu->arch.guest_context;
 
+	kvm_err("kvm_riscv_vcpu_mmio_load %lx %lx\n", fault_addr, htinst);
 	/* Determine trapped instruction */
 	if (htinst & 0x1) {
 		/*
@@ -497,6 +498,7 @@ int kvm_riscv_vcpu_mmio_load(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		 */
 		insn = kvm_riscv_vcpu_unpriv_read(vcpu, true, ct->sepc,
 						  &utrap);
+		kvm_err("kvm_riscv_vcpu_mmio_load insn=%lx %d\n", htinst, utrap.scause);
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
 			utrap.sepc = ct->sepc;
@@ -609,6 +611,8 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	struct kvm_cpu_context *ct = &vcpu->arch.guest_context;
 	void *nshmem;
 
+	kvm_err("kvm_riscv_vcpu_mmio_store %lx %lx\n", fault_addr, htinst);
+
 	/* Determine trapped instruction */
 	if (htinst & 0x1) {
 		/*
@@ -626,6 +630,7 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		 */
 		insn = kvm_riscv_vcpu_unpriv_read(vcpu, true, ct->sepc,
 						  &utrap);
+		kvm_err("kvm_riscv_vcpu_mmio_store insn=%lx %d\n", htinst, utrap.scause);
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
 			utrap.sepc = ct->sepc;
@@ -697,6 +702,7 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 			data32 = GET_RS2C(insn, &vcpu->arch.guest_context);
 		}
 	} else {
+		kvm_err("kvm_riscv_vcpu_mmio_store err 1\n");
 		return -EOPNOTSUPP;
 	}
 
@@ -726,6 +732,7 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		*((u64 *)run->mmio.data) = data64;
 		break;
 	default:
+		kvm_err("kvm_riscv_vcpu_mmio_store err 2 %d\n", len);
 		return -EOPNOTSUPP;
 	}
 
@@ -737,6 +744,7 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	/* Try to handle MMIO access in the kernel */
 	if (!kvm_io_bus_write(vcpu, KVM_MMIO_BUS,
 			      fault_addr, len, run->mmio.data)) {
+		kvm_err("kvm_riscv_vcpu_mmio_store err 3\n");
 		/* Successfully handled MMIO access in the kernel so resume */
 		vcpu->stat.mmio_exit_kernel++;
 		kvm_riscv_vcpu_mmio_return(vcpu, run);
@@ -747,6 +755,7 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	vcpu->stat.mmio_exit_user++;
 	run->exit_reason = KVM_EXIT_MMIO;
 
+	kvm_err("kvm_riscv_vcpu_mmio_store err 4\n");
 	return 0;
 }
 
@@ -832,6 +841,7 @@ int kvm_riscv_vcpu_mmio_return(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		}
 		break;
 	default:
+		kvm_err("kvm_riscv_vcpu_mmio_store err 55\n");
 		return -EOPNOTSUPP;
 	}
 
