@@ -368,7 +368,7 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	/* Read current HVIP and VSIE CSRs */
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (is_cove_vm_finalized(vcpu->kvm) || kvm_riscv_nacl_sync_csr_available()) {
 		csr->vsie = nacl_csr_read(CSR_VSIE);
 		/*
 		* Sync-up HVIP.VSSIP bit changes does by Guest. For TVMs,
@@ -707,7 +707,7 @@ static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (is_cove_vcpu(vcpu) || kvm_riscv_nacl_sync_csr_available()) {
 		nacl_csr_write(CSR_HVIP, csr->hvip);
 	} else {
 		csr_write(CSR_HVIP, csr->hvip);
