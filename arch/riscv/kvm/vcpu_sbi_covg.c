@@ -211,7 +211,9 @@ static int kvm_sbi_ext_covg_handler(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	case SBI_EXT_COVG_DENY_EXT_INTERRUPT:
 		/* We don't really need to do anything here for now. */
 		return 0;
-
+	case 10:
+		kvm_err("ConfVM dbg: a0=%ld a1=%ld.\n", cp->a0, cp->a1);
+		return 0;
 	default:
 		kvm_err("%s: Unsupported guest SBI %ld.\n", __func__, funcid);
 		retdata->err_val = SBI_ERR_NOT_SUPPORTED;

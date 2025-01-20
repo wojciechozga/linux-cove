@@ -76,12 +76,12 @@ static int kvm_riscv_vcpu_update_vstimecmp(struct kvm_vcpu *vcpu, u64 ncycles)
 	if (is_cove_vm_finalized(vcpu->kvm))
 		return 0;
 
-#if defined(CONFIG_32BIT)
-	nacl_csr_write(CSR_VSTIMECMP, ncycles & 0xFFFFFFFF);
-	nacl_csr_write(CSR_VSTIMECMPH, ncycles >> 32);
-#else
-	nacl_csr_write(CSR_VSTIMECMP, ncycles);
-#endif
+// #if defined(CONFIG_32BIT)
+// 	nacl_csr_write(CSR_VSTIMECMP, ncycles & 0xFFFFFFFF);
+// 	nacl_csr_write(CSR_VSTIMECMPH, ncycles >> 32);
+// #else
+// 	nacl_csr_write(CSR_VSTIMECMP, ncycles);
+// #endif
 	return 0;
 }
 
@@ -297,7 +297,6 @@ int kvm_riscv_vcpu_timer_reset(struct kvm_vcpu *vcpu)
 static void kvm_riscv_vcpu_update_timedelta(struct kvm_vcpu *vcpu)
 {
 	struct kvm_guest_timer *gt = &vcpu->kvm->arch.timer;
-
 
 // #if defined(CONFIG_32BIT)
 // 	nacl_csr_write(CSR_HTIMEDELTA, (u32)(gt->time_delta));

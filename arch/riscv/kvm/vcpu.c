@@ -368,18 +368,8 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	/* Read current HVIP and VSIE CSRs */
-	if (is_cove_vm_finalized(vcpu->kvm) || kvm_riscv_nacl_sync_csr_available()) {
-		csr->vsie = nacl_csr_read(CSR_VSIE);
-		/*
-		* Sync-up HVIP.VSSIP bit changes does by Guest. For TVMs,
-		* the HVIP is not updated by the TSM. Expect it to be zero.
-		*/
-		hvip = nacl_csr_read(CSR_HVIP);
-	} else {
-		csr->vsie = csr_read(CSR_VSIE);
-		hvip = csr_read(CSR_HVIP);
-	}
-
+	csr->vsie = nacl_csr_read(CSR_VSIE);
+	hvip = nacl_csr_read(CSR_HVIP);
 
 	if ((csr->hvip ^ hvip) & (1UL << IRQ_VS_SOFT)) {
 		if (hvip & (1UL << IRQ_VS_SOFT)) {
@@ -549,7 +539,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (unlikely(kvm_riscv_cove_enabled()) || kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available()) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);
@@ -560,9 +550,9 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		nacl_shmem_csr_write(nshmem, CSR_VSTVAL, csr->vstval);
 		nacl_shmem_csr_write(nshmem, CSR_HVIP, csr->hvip);
 		nacl_shmem_csr_write(nshmem, CSR_VSATP, csr->vsatp);
-		nacl_shmem_csr_write(nshmem, CSR_HENVCFG, henvcfg);
+		// nacl_shmem_csr_write(nshmem, CSR_HENVCFG, henvcfg);
 #ifdef CONFIG_32BIT
-		nacl_shmem_csr_write(nshmem, CSR_HENVCFGH, henvcfg >> 32);
+		// nacl_shmem_csr_write(nshmem, CSR_HENVCFGH, henvcfg >> 32);
 #endif
 	} else {
 		csr_write(CSR_VSSTATUS, csr->vsstatus);
@@ -574,9 +564,9 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		csr_write(CSR_VSTVAL, csr->vstval);
 		csr_write(CSR_HVIP, csr->hvip);
 		csr_write(CSR_VSATP, csr->vsatp);
-		csr_write(CSR_HENVCFG, henvcfg);
+		// csr_write(CSR_HENVCFG, henvcfg);
 #ifdef CONFIG_32BIT
-		csr_write(CSR_HENVCFGH, henvcfg >> 32);
+		// csr_write(CSR_HENVCFGH, henvcfg >> 32);
 #endif
 	}
 
@@ -707,11 +697,10 @@ static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
-	if (is_cove_vcpu(vcpu) || kvm_riscv_nacl_sync_csr_available()) {
-		nacl_csr_write(CSR_HVIP, csr->hvip);
-	} else {
-		csr_write(CSR_HVIP, csr->hvip);
+	if (csr->hvip > 0) {
+		kvm_err("HVIP={:x}", csr->hvip);
 	}
+	nacl_csr_write(CSR_HVIP, csr->hvip);
 	kvm_riscv_vcpu_aia_update_hvip(vcpu);
 }
 

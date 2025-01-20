@@ -78,8 +78,8 @@ void kvm_riscv_local_hfence_gvma_all(void)
 	 * as the host may be running in HS-mode and need to issue hfence
 	 * for legacy VMs.
 	 */
-	if (kvm_riscv_cove_enabled())
-		return;
+	// if (kvm_riscv_cove_enabled())
+	// 	return;
 
 	asm volatile(HFENCE_GVMA(zero, zero) : : : "memory");
 }

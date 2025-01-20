@@ -22,6 +22,8 @@ static int gstage_page_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 
 	fault_addr = (trap->htval << 2) | (trap->stval & 0x3);
 	gfn = fault_addr >> PAGE_SHIFT;
+
+	// kvm_err("gstage_page_fault 1 %d %d 0x%x\n", trap->scause, kvm_is_error_hva(hva), fault_addr);
 	memslot = gfn_to_memslot(vcpu->kvm, gfn);
 	hva = gfn_to_hva_memslot_prot(memslot, gfn, &writable);
 
@@ -41,12 +43,12 @@ static int gstage_page_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		};
 	}
 
-	kvm_err("gstage_page_fault %d %d %d\n", trap->scause, kvm_is_error_hva(hva), writable);
+	// kvm_err("gstage_page_fault 2 %d %d %d 0x%x\n", trap->scause, kvm_is_error_hva(hva), writable, fault_addr);
 	if (is_cove_vm_finalized(vcpu->kvm)) {
 		/* CoVE doesn't care about PTE prots now. No need to compute the prots */
 		ret = kvm_riscv_cove_handle_pagefault(vcpu, fault_addr, hva);
 	} else {
-		kvm_err("gstage_page_fault kvm_riscv_gstage_map\n");
+		kvm_err("gstage_page_fault kvm_riscv_gstage_map %lx\n", fault_addr);
 		ret = kvm_riscv_gstage_map(vcpu, memslot, fault_addr, hva,
 			(trap->scause == EXC_STORE_GUEST_PAGE_FAULT) ? true : false);
 	}
@@ -191,6 +193,20 @@ int kvm_riscv_vcpu_exit(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	/* If we got host interrupt then do nothing */
 	if (trap->scause & CAUSE_IRQ_FLAG)
 		return 1;
+
+	// kvm_err("VM state %d\n", ret);
+	// kvm_err("SEPC=0x%lx SSTATUS=0x%lx HSTATUS=0x%lx\n",
+	// 	vcpu->arch.guest_context.sepc,
+	// 	vcpu->arch.guest_context.sstatus,
+	// 	vcpu->arch.guest_context.hstatus);
+	// kvm_err("scounteren=0x%lx\n", csr_read(CSR_SCOUNTEREN));
+	// kvm_err("hstatus=0x%lx hedeleg=0x%lx hideleg=0x%lx hcounteren=0x%lx\n",
+	// 	csr_read(CSR_HSTATUS),
+	// 	csr_read(CSR_HEDELEG),
+	// 	csr_read(CSR_HIDELEG),
+	// 	csr_read(CSR_HCOUNTEREN));
+	// kvm_err("SCAUSE=0x%lx STVAL=0x%lx HTVAL=0x%lx HTINST=0x%lx\n",
+	// 	trap->scause, trap->stval, trap->htval, trap->htinst);
 
 	/* Handle guest traps */
 	ret = -EFAULT;
