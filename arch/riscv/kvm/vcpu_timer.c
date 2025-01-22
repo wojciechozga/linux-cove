@@ -73,15 +73,15 @@ static int kvm_riscv_vcpu_timer_cancel(struct kvm_vcpu_timer *t)
 static int kvm_riscv_vcpu_update_vstimecmp(struct kvm_vcpu *vcpu, u64 ncycles)
 {
 	/* Host is not allowed to update the vstimecmp for the TVM */
-	if (is_cove_vm_finalized(vcpu->kvm))
-		return 0;
+	// if (is_cove_vm_finalized(vcpu->kvm))
+	// 	return 0;
 
-// #if defined(CONFIG_32BIT)
-// 	nacl_csr_write(CSR_VSTIMECMP, ncycles & 0xFFFFFFFF);
-// 	nacl_csr_write(CSR_VSTIMECMPH, ncycles >> 32);
-// #else
-// 	nacl_csr_write(CSR_VSTIMECMP, ncycles);
-// #endif
+#if defined(CONFIG_32BIT)
+	nacl_csr_write(CSR_VSTIMECMP, ncycles & 0xFFFFFFFF);
+	nacl_csr_write(CSR_VSTIMECMPH, ncycles >> 32);
+#else
+	nacl_csr_write(CSR_VSTIMECMP, ncycles);
+#endif
 	return 0;
 }
 
@@ -298,12 +298,12 @@ static void kvm_riscv_vcpu_update_timedelta(struct kvm_vcpu *vcpu)
 {
 	struct kvm_guest_timer *gt = &vcpu->kvm->arch.timer;
 
-// #if defined(CONFIG_32BIT)
-// 	nacl_csr_write(CSR_HTIMEDELTA, (u32)(gt->time_delta));
-// 	nacl_csr_write(CSR_HTIMEDELTAH, (u32)(gt->time_delta >> 32));
-// #else
-// 	nacl_csr_write(CSR_HTIMEDELTA, gt->time_delta);
-// #endif
+#if defined(CONFIG_32BIT)
+	nacl_csr_write(CSR_HTIMEDELTA, (u32)(gt->time_delta));
+	nacl_csr_write(CSR_HTIMEDELTAH, (u32)(gt->time_delta >> 32));
+#else
+	nacl_csr_write(CSR_HTIMEDELTA, gt->time_delta);
+#endif
 }
 
 void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
@@ -311,20 +311,20 @@ void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_timer *t = &vcpu->arch.timer;
 
 	/* While in CoVE, HOST must not manage HTIMEDELTA or VSTIMECMP for TVM */
-	if (is_cove_vm_finalized(vcpu->kvm))
-		goto skip_hcsr_update;
+	// if (is_cove_vm_finalized(vcpu->kvm))
+	// 	goto skip_hcsr_update;
 
 	kvm_riscv_vcpu_update_timedelta(vcpu);
 
 	if (!t->sstc_enabled)
 		return;
 
-// #if defined(CONFIG_32BIT)
-// 	nacl_csr_write(CSR_VSTIMECMP, (u32)t->next_cycles);
-// 	nacl_csr_write(CSR_VSTIMECMPH, (u32)(t->next_cycles >> 32));
-// #else
-// 	nacl_csr_write(CSR_VSTIMECMP, t->next_cycles);
-// #endif
+#if defined(CONFIG_32BIT)
+	nacl_csr_write(CSR_VSTIMECMP, (u32)t->next_cycles);
+	nacl_csr_write(CSR_VSTIMECMPH, (u32)(t->next_cycles >> 32));
+#else
+	nacl_csr_write(CSR_VSTIMECMP, t->next_cycles);
+#endif
 
 skip_hcsr_update:
 	/* timer should be enabled for the remaining operations */
@@ -341,20 +341,20 @@ void kvm_riscv_vcpu_timer_sync(struct kvm_vcpu *vcpu)
 	if (!t->sstc_enabled)
 		return;
 
-// #if defined(CONFIG_32BIT)
-// 	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
-// 	t->next_cycles |= (u64)nacl_csr_read(CSR_VSTIMECMPH) << 32;
-// #else
-// 	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
-// #endif
+#if defined(CONFIG_32BIT)
+	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
+	t->next_cycles |= (u64)nacl_csr_read(CSR_VSTIMECMPH) << 32;
+#else
+	t->next_cycles = nacl_csr_read(CSR_VSTIMECMP);
+#endif
 }
 
 void kvm_riscv_vcpu_timer_save(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_timer *t = &vcpu->arch.timer;
 
-	if (!t->sstc_enabled)
-		return;
+	// if (!t->sstc_enabled)
+	// 	return;
 
 	/*
 	 * The vstimecmp CSRs are saved by kvm_riscv_vcpu_timer_sync()

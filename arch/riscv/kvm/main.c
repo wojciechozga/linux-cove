@@ -107,21 +107,21 @@ static int __init riscv_kvm_init(void)
 		return -ENODEV;
 	}
 
-	rc = kvm_riscv_nacl_init();
-	if (rc && rc != -ENODEV)
-		return rc;
+	// rc = kvm_riscv_nacl_init();
+	// if (rc && rc != -ENODEV)
+	// 	return rc;
 
-	kvm_riscv_cove_init();
+	// kvm_riscv_cove_init();
 
 	kvm_riscv_gstage_mode_detect();
 
 	kvm_riscv_gstage_vmid_detect();
 
-	rc = kvm_riscv_aia_init();
-	if (rc && rc != -ENODEV) {
-		kvm_riscv_nacl_exit();
-		return rc;
-	}
+	// rc = kvm_riscv_aia_init();
+	// if (rc && rc != -ENODEV) {
+	// 	kvm_riscv_nacl_exit();
+	// 	return rc;
+	// }
 
 	/* TVM don't need RFENCE extension as hardware imsic support is mandatory for TVMs
 	 * TODO: This check should happen later if HW_ACCEL mode is not set as RFENCE

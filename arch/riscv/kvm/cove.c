@@ -646,8 +646,10 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 	 * run first VCPU, we need to update this here rather than in timer
 	 * init.
 	 */
-	// if (unlikely(!gt->time_delta))
-	// 	gt->time_delta = nacl_shmem_csr_read(nshmem, CSR_HTIMEDELTA);
+	if (unlikely(!gt->time_delta)) {
+		gt->time_delta = nacl_shmem_csr_read(nshmem, CSR_HTIMEDELTA);
+		gt->time_delta = 0;
+	}
 }
 
 void kvm_riscv_cove_vcpu_destroy(struct kvm_vcpu *vcpu)

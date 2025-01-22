@@ -43,12 +43,10 @@ static int gstage_page_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		};
 	}
 
-	// kvm_err("gstage_page_fault 2 %d %d %d 0x%x\n", trap->scause, kvm_is_error_hva(hva), writable, fault_addr);
 	if (is_cove_vm_finalized(vcpu->kvm)) {
 		/* CoVE doesn't care about PTE prots now. No need to compute the prots */
 		ret = kvm_riscv_cove_handle_pagefault(vcpu, fault_addr, hva);
 	} else {
-		kvm_err("gstage_page_fault kvm_riscv_gstage_map %lx\n", fault_addr);
 		ret = kvm_riscv_gstage_map(vcpu, memslot, fault_addr, hva,
 			(trap->scause == EXC_STORE_GUEST_PAGE_FAULT) ? true : false);
 	}
@@ -189,6 +187,7 @@ int kvm_riscv_vcpu_exit(struct kvm_vcpu *vcpu, struct kvm_run *run,
 			struct kvm_cpu_trap *trap)
 {
 	int ret;
+	unsigned long hva, fault_addr;
 
 	/* If we got host interrupt then do nothing */
 	if (trap->scause & CAUSE_IRQ_FLAG)
