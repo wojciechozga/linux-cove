@@ -73,8 +73,8 @@ static int kvm_riscv_vcpu_timer_cancel(struct kvm_vcpu_timer *t)
 static int kvm_riscv_vcpu_update_vstimecmp(struct kvm_vcpu *vcpu, u64 ncycles)
 {
 	/* Host is not allowed to update the vstimecmp for the TVM */
-	// if (is_cove_vm_finalized(vcpu->kvm))
-	// 	return 0;
+	if (is_cove_vm_finalized(vcpu->kvm))
+		return 0;
 
 #if defined(CONFIG_32BIT)
 	nacl_csr_write(CSR_VSTIMECMP, ncycles & 0xFFFFFFFF);
@@ -311,10 +311,10 @@ void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_timer *t = &vcpu->arch.timer;
 
 	/* While in CoVE, HOST must not manage HTIMEDELTA or VSTIMECMP for TVM */
-	// if (is_cove_vm_finalized(vcpu->kvm))
-	// 	goto skip_hcsr_update;
-
 	kvm_riscv_vcpu_update_timedelta(vcpu);
+
+	if (is_cove_vm_finalized(vcpu->kvm))
+		goto skip_hcsr_update;
 
 	if (!t->sstc_enabled)
 		return;
@@ -353,8 +353,8 @@ void kvm_riscv_vcpu_timer_save(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_timer *t = &vcpu->arch.timer;
 
-	// if (!t->sstc_enabled)
-	// 	return;
+	if (!t->sstc_enabled)
+		return;
 
 	/*
 	 * The vstimecmp CSRs are saved by kvm_riscv_vcpu_timer_sync()

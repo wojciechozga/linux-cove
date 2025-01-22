@@ -548,7 +548,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || unlikely(is_cove_vm_single_step_initializing(vcpu->kvm))) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);

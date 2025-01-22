@@ -107,11 +107,12 @@ static int __init riscv_kvm_init(void)
 		return -ENODEV;
 	}
 
-	// rc = kvm_riscv_nacl_init();
-	// if (rc && rc != -ENODEV)
-	// 	return rc;
+	rc = kvm_riscv_nacl_init();
+	if (rc && rc != -ENODEV)
+		return rc;
 
-	// kvm_riscv_cove_init();
+	kvm_riscv_cove_init();
+	kvm_info("TSM OK?\n");
 
 	kvm_riscv_gstage_mode_detect();
 
