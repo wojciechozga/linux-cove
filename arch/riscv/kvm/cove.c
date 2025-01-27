@@ -446,7 +446,7 @@ int kvm_riscv_cove_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 
 	sbi_ext = kvm_vcpu_sbi_find_ext(vcpu, cp->a7);
 	if ((sbi_ext && sbi_ext->handler) && ((cp->a7 == SBI_EXT_DBCN) ||
-	    (cp->a7 == SBI_EXT_HSM) || (cp->a7 == SBI_EXT_SRST) ||
+	    (cp->a7 == SBI_EXT_HSM) || (cp->a7 == SBI_EXT_SRST) || (cp->a7 == SBI_EXT_TIME) ||
 	    (cp->a7 == SBI_EXT_COVG) || ext_is_01)) {
 		ret = sbi_ext->handler(vcpu, run, &sbi_ret);
 	} else {

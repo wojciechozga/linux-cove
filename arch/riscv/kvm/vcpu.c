@@ -844,13 +844,14 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	/* Read current HVIP and VSIE CSRs */
-	csr->vsie = nacl_csr_read(CSR_VSIE);
+	if (is_cove_vm_finalized(vcpu->kvm)) {
+		csr->vsie = nacl_shmem_csr_read(nacl_shmem(), CSR_VSIE);
+		hvip = nacl_shmem_csr_read(nacl_shmem(), CSR_HVIP);
+	} else {
+		csr->vsie = nacl_csr_read(CSR_VSIE);
+		hvip = nacl_csr_read(CSR_HVIP);
+	}
 
-	/*
-	 * Sync-up HVIP.VSSIP bit changes does by Guest. For TVMs,
-	 * the HVIP is not updated by the TSM. Expect it to be zero.
-	 */
-	hvip = nacl_csr_read(CSR_HVIP);
 	if ((csr->hvip ^ hvip) & (1UL << IRQ_VS_SOFT)) {
 		if (hvip & (1UL << IRQ_VS_SOFT)) {
 			if (!test_and_set_bit(IRQ_VS_SOFT,
@@ -1004,7 +1005,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 		goto skip_load;
 	}
 
-	if (unlikely(kvm_riscv_cove_enabled()) || kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || is_cove_vm_single_step_initializing(vcpu->kvm)) {
 		nshmem = nacl_shmem();
 		nacl_shmem_csr_write(nshmem, CSR_VSSTATUS, csr->vsstatus);
 		nacl_shmem_csr_write(nshmem, CSR_VSIE, csr->vsie);
@@ -1068,7 +1069,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 
 	kvm_riscv_vcpu_timer_save(vcpu);
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || is_cove_vm_single_step_initializing(vcpu->kvm)) {
 		/**
 		 * For TVMs, we don't need a separate case as TSM only updates
 		 * the required CSRs during the world switch. All other CSR
@@ -1154,7 +1155,7 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
-
+	nacl_shmem_csr_write(nacl_shmem(), CSR_HVIP, csr->hvip);
 	nacl_csr_write(CSR_HVIP, csr->hvip);
 	kvm_riscv_vcpu_aia_update_hvip(vcpu);
 }
