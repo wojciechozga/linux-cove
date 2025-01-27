@@ -574,8 +574,6 @@ void kvm_riscv_cove_gstage_preload(struct kvm_vcpu *vcpu) {
 	unsigned long hva, gpa, page;
 	int bkt;
 
-	kvm_err("kvm_riscv_cove_gstage_preload\n");
-
 	kvm_for_each_memslot(memslot, bkt, kvm_memslots(vcpu->kvm)) {
 		for (page = 0; page < memslot->npages; page++) {
 			gpa = gfn_to_gpa(memslot->base_gfn) + page * PAGE_SIZE;
@@ -605,14 +603,11 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 	/* Invoke finalize to mark TVM is ready run for the first time */
 	if (unlikely(!tvmc->finalized_done)) {
 		if (is_cove_vm_multi_step_initializing(vcpu->kvm)) {
-			kvm_err("multi step TVM\n");
 			rc = sbi_covh_tsm_finalize_tvm(tvmc->tvm_guest_id, cntx->sepc, cntx->a1);
 		} else if (is_cove_vm_single_step_initializing(vcpu->kvm)) {
-			kvm_err("Promote to TVM: %lx %lx %lx\n", cntx->a1, tvmc->cove_tap_addr, cntx->sepc);
 			rc = sbi_covh_tsm_promote_to_tvm(cntx->a1, tvmc->cove_tap_addr, cntx->sepc,
 							 &tvmc->tvm_guest_id);
 		} else {
-			kvm_err("err tvm \n");
 			rc = -EOPNOTSUPP;
 		}
 		if (rc) {
@@ -1071,11 +1066,8 @@ int kvm_riscv_cove_init(void)
 	int rc;
 
 	/* We currently support host in VS mode. Thus, NACL is mandatory */
-	if (sbi_probe_extension(SBI_EXT_COVH) <= 0)
-	 	return -EOPNOTSUPP;
-
-	if (!kvm_riscv_nacl_available())
-	 	return -EOPNOTSUPP;
+	if (sbi_probe_extension(SBI_EXT_COVH) <= 0 || !kvm_riscv_nacl_available())
+		return -EOPNOTSUPP;
 
 	rc = sbi_covh_tsm_get_info(&tinfo);
 	if (rc < 0)

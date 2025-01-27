@@ -480,7 +480,6 @@ int kvm_riscv_vcpu_mmio_load(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	struct kvm_cpu_trap utrap = { 0 };
 	struct kvm_cpu_context *ct = &vcpu->arch.guest_context;
 
-	// kvm_err("kvm_riscv_vcpu_mmio_load %lx %lx\n", fault_addr, htinst);
 	/* Determine trapped instruction */
 	if (htinst & 0x1) {
 		/*
@@ -609,8 +608,6 @@ int kvm_riscv_vcpu_mmio_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	struct kvm_cpu_trap utrap = { 0 };
 	struct kvm_cpu_context *ct = &vcpu->arch.guest_context;
 	void *nshmem;
-
-	// kvm_err("kvm_riscv_vcpu_mmio_store %lx %lx\n", fault_addr, htinst);
 
 	/* Determine trapped instruction */
 	if (htinst & 0x1) {

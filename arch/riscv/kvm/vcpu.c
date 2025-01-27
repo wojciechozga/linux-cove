@@ -244,8 +244,8 @@ long kvm_arch_vcpu_async_ioctl(struct file *filp,
 	if (ioctl == KVM_INTERRUPT) {
 		struct kvm_interrupt irq;
 		/* We do not support user space emulated IRQCHIP for TVMs that utilize AIA yet */
-		// if (is_cove_vm_finalized(vcpu->kvm) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
-		// 	return -ENXIO;
+		if (is_cove_vm_finalized(vcpu->kvm) && kvm_riscv_cove_capability(KVM_COVE_TSM_CAP_AIA))
+			return -ENXIO;
 
 		if (copy_from_user(&irq, argp, sizeof(irq)))
 			return -EFAULT;
@@ -363,21 +363,17 @@ void kvm_riscv_vcpu_flush_interrupts(struct kvm_vcpu *vcpu)
 
 void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 {
-	void *nshmem;
 	unsigned long hvip;
 	struct kvm_vcpu_arch *v = &vcpu->arch;
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	/* Read current HVIP and VSIE CSRs */
 	if (is_cove_vm_finalized(vcpu->kvm)) {
-		nshmem = nacl_shmem();
-		csr->vsie = nacl_shmem_csr_read(nshmem, CSR_VSIE);
-		hvip = nacl_shmem_csr_read(nshmem, CSR_HVIP);
+		csr->vsie = nacl_shmem_csr_read(nacl_shmem(), CSR_VSIE);
+		hvip = nacl_shmem_csr_read(nacl_shmem(), CSR_HVIP);
 	} else {
 		csr->vsie = nacl_csr_read(CSR_VSIE);
 		hvip = nacl_csr_read(CSR_HVIP);
-		csr->vsie = csr_read(CSR_VSIE);
-		hvip = csr_read(CSR_HVIP);
 	}
 
 	if ((csr->hvip ^ hvip) & (1UL << IRQ_VS_SOFT)) {
@@ -619,7 +615,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 					 vcpu->arch.isa);
 	kvm_riscv_vcpu_host_vector_restore(&vcpu->arch.host_context);
 
-	if (kvm_riscv_nacl_sync_csr_available()) {
+	if (kvm_riscv_nacl_sync_csr_available() || is_cove_vm_single_step_initializing(vcpu->kvm)) {
 		/**
 		 * For TVMs, we don't need a separate case as TSM only updates
 		 * the required CSRs during the world switch. All other CSR
@@ -705,17 +701,8 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
-	void *nshmem;
-
-	if (csr->hvip > 0) {
-		kvm_err("HVIP=%lx", csr->hvip);
-	}
-	if (is_cove_vm_finalized(vcpu->kvm)) {
-		nshmem = nacl_shmem();
-		nacl_shmem_csr_write(nshmem, CSR_HVIP, csr->hvip);
-	}
+	nacl_shmem_csr_write(nacl_shmem(), CSR_HVIP, csr->hvip);
 	nacl_csr_write(CSR_HVIP, csr->hvip);
-	csr_write(CSR_HVIP, csr->hvip);
 	kvm_riscv_vcpu_aia_update_hvip(vcpu);
 }
 

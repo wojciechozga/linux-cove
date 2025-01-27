@@ -112,7 +112,6 @@ static int __init riscv_kvm_init(void)
 		return rc;
 
 	kvm_riscv_cove_init();
-	kvm_info("TSM OK?\n");
 
 	kvm_riscv_gstage_mode_detect();
 
