@@ -21,6 +21,7 @@ static int kvm_riscv_cove_promote_to_tvm(struct kvm_vcpu *vcpu,
 	struct kvm_vcpu *target_vcpu;
 	unsigned long target_vcpuid;
 	void *nshmem = nacl_shmem();
+	struct kvm_guest_timer *gt;
 	int rc, gpr_id, offset;
 
 	rc = kvm_riscv_cove_vm_single_step_init(vcpu->kvm);
@@ -29,6 +30,7 @@ static int kvm_riscv_cove_promote_to_tvm(struct kvm_vcpu *vcpu,
 
 	tvmc = vcpu->kvm->arch.tvmc;
 	cntx = &vcpu->arch.guest_context;
+	gt = &vcpu->kvm->arch.timer;
 
 	/* Reset all but boot vcpu and preload VM's pages */
 	kvm_for_each_vcpu(target_vcpuid, target_vcpu, vcpu->kvm) {
@@ -48,6 +50,7 @@ static int kvm_riscv_cove_promote_to_tvm(struct kvm_vcpu *vcpu,
 		goto vcpus_allocated;
 
 	tvmc->finalized_done = true;
+	gt->time_delta = nacl_shmem_csr_read(nshmem, CSR_HTIMEDELTA);
 	kvm_info("CoVE Guest creation successful with guest id %lx\n", tvmc->tvm_guest_id);
 	return 0;
 

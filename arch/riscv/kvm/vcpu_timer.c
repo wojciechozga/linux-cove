@@ -312,8 +312,10 @@ void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
 
 	/* While in CoVE, HOST must not manage HTIMEDELTA or VSTIMECMP for TVM */
 
-	if (is_cove_vm_finalized(vcpu->kvm))
-		goto skip_hcsr_update;
+	if (is_cove_vm_finalized(vcpu->kvm)) {
+		return;
+		// goto skip_hcsr_update;
+	}
 
 	kvm_riscv_vcpu_update_timedelta(vcpu);
 
