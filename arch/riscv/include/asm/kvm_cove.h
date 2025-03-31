@@ -172,6 +172,7 @@ void kvm_riscv_cove_vcpu_put(struct kvm_vcpu *vcpu);
 void kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_trap *trap);
 int kvm_riscv_cove_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run);
 
+int kvm_riscv_cove_preload_measured_regions(struct kvm *kvm);
 int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm, struct kvm_riscv_cove_measure_region *mr);
 int kvm_riscv_cove_vm_add_memreg(struct kvm *kvm, unsigned long gpa, unsigned long size);
 int kvm_riscv_cove_handle_pagefault(struct kvm_vcpu *vcpu, gpa_t gpa,
@@ -212,6 +213,7 @@ static inline int kvm_riscv_cove_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kv
 }
 static inline int kvm_riscv_cove_vm_add_memreg(struct kvm *kvm, unsigned long gpa,
 					       unsigned long size) {return -1; }
+static inline int kvm_riscv_cove_preload_measured_regions(struct kvm *kvm) { return -1; }
 static inline int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm,
 						  struct kvm_riscv_cove_measure_region *mr)
 {

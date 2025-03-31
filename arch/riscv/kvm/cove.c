@@ -569,6 +569,41 @@ int kvm_riscv_cove_handle_pagefault(struct kvm_vcpu *vcpu, gpa_t gpa,
 	return kvm_riscv_cove_gstage_map(vcpu, gpa, hva);
 }
 
+int kvm_riscv_cove_preload_measured_regions(struct kvm *kvm) {
+	struct kvm_cove_tvm_context *tvmc = kvm->arch.tvmc;
+	struct kvm_riscv_cove_page *cpage, *temp;
+	struct kvm_vcpu *target_vcpu, *boot_vcpu;
+        struct kvm_memory_slot *memslot;
+	unsigned long target_vcpuid;
+	unsigned long hva, gpa;
+	int i;
+
+	if (!tvmc)
+		return -EFAULT;
+
+	kvm_for_each_vcpu(target_vcpuid, target_vcpu, kvm) {
+		if (target_vcpu->vcpu_idx == 0) {
+			boot_vcpu = target_vcpu;
+			break;
+		}
+	}
+
+	if (!boot_vcpu)
+		return -EFAULT;
+
+	list_for_each_entry_safe(cpage, temp, &tvmc->measured_pages, link) {
+		for (i=0; i<cpage->npages; i++) {
+			gpa = cpage->gpa + i * PAGE_SIZE;
+			memslot = gfn_to_memslot(boot_vcpu->kvm, gpa_to_gfn(gpa));
+			hva = gfn_to_hva_memslot_prot(memslot, gpa_to_gfn(gpa), NULL);
+			if (!kvm_is_error_hva(hva))
+				kvm_riscv_gstage_map(boot_vcpu, memslot, gpa, hva, NULL);
+		}
+	}
+
+       return 0;
+}
+
 void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_trap *trap)
 {
 	struct kvm_cpu_context *cntx = &vcpu->arch.guest_context;
@@ -731,10 +766,23 @@ int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm, struct kvm_riscv_cove_measu
 		return -EINVAL;
 	}
 
-	if (!is_cove_vm_multi_step_initializing(kvm))
-		return 0;
-
 	num_pages = bytes_to_pages(mr->size);
+
+	if (is_cove_vm_single_step_initializing(kvm)) {
+		cpage = kmalloc(sizeof(*cpage), GFP_KERNEL_ACCOUNT);
+		if (!cpage) {
+			return -ENOMEM;
+		}
+		cpage->npages = num_pages;
+		cpage->gpa = mr->gpa;
+		cpage->hva = mr->userspace_addr;
+		cpage->is_mapped = false;
+		INIT_LIST_HEAD(&cpage->link);
+		list_add(&cpage->link, &tvmc->measured_pages);
+
+		return 0;
+	}
+
 	conf = &tvmc->confidential_region;
 
 	if (!IS_ALIGNED(mr->userspace_addr, PAGE_SIZE) ||
