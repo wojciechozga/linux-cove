@@ -51,6 +51,7 @@ static int kvm_riscv_cove_promote_to_tvm(struct kvm_vcpu *vcpu,
 
 	tvmc->finalized_done = true;
 	gt->time_delta = nacl_shmem_csr_read(nshmem, CSR_HTIMEDELTA);
+	kvm_info("htimedelta %lx\n", gt->time_delta);
 	kvm_info("CoVE Guest creation successful with guest id %lx\n", tvmc->tvm_guest_id);
 	return 0;
 

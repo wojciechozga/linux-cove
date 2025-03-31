@@ -313,8 +313,8 @@ void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
 	/* While in CoVE, HOST must not manage HTIMEDELTA or VSTIMECMP for TVM */
 
 	if (is_cove_vm_finalized(vcpu->kvm)) {
-		return;
-		// goto skip_hcsr_update;
+		// return;
+		goto skip_hcsr_update;
 	}
 
 	kvm_riscv_vcpu_update_timedelta(vcpu);
@@ -341,7 +341,9 @@ void kvm_riscv_vcpu_timer_sync(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_timer *t = &vcpu->arch.timer;
 
-	t->next_cycles = nacl_shmem_csr_read(nacl_shmem(), CSR_VSTIMECMP);
+	if (is_cove_vm_finalized(vcpu->kvm)) {
+		t->next_cycles = nacl_shmem_csr_read(nacl_shmem(), CSR_VSTIMECMP);
+	}
 
 	if (!t->sstc_enabled)
 		return;

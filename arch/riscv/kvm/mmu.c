@@ -565,6 +565,7 @@ out:
 
 bool kvm_unmap_gfn_range(struct kvm *kvm, struct kvm_gfn_range *range)
 {
+
 	if (!kvm->arch.pgd || is_cove_vm_finalized(kvm) || is_cove_vm_multi_step_initializing(kvm))
 		return false;
 

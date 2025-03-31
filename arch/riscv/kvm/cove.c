@@ -572,14 +572,16 @@ int kvm_riscv_cove_handle_pagefault(struct kvm_vcpu *vcpu, gpa_t gpa,
 void kvm_riscv_cove_gstage_preload(struct kvm_vcpu *vcpu) {
 	struct kvm_memory_slot *memslot;
 	unsigned long hva, gpa, page;
+	bool writable;
 	int bkt;
 
-	kvm_for_each_memslot(memslot, bkt, kvm_memslots(vcpu->kvm)) {
+	kvm_for_each_memslot(memslot, bkt, kvm_vcpu_memslots(vcpu)) {
+		gpa = gfn_to_gpa(memslot->base_gfn);
 		for (page = 0; page < memslot->npages; page++) {
 			gpa = gfn_to_gpa(memslot->base_gfn) + page * PAGE_SIZE;
-			hva = gfn_to_hva_memslot_prot(memslot, gpa_to_gfn(gpa), NULL);
+			hva = gfn_to_hva_memslot_prot(memslot, gpa_to_gfn(gpa), &writable);
 			if (!kvm_is_error_hva(hva))
-				kvm_riscv_gstage_map(vcpu, memslot, gpa, hva, NULL);
+				kvm_riscv_gstage_map(vcpu, memslot, gpa, hva, writable);
 		}
 	}
 }
@@ -643,7 +645,7 @@ void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_
 	 */
 	if (unlikely(!gt->time_delta)) {
 		gt->time_delta = nacl_shmem_csr_read(nshmem, CSR_HTIMEDELTA);
-		gt->time_delta = 0;
+		// gt->time_delta = 0;
 	}
 }
 
@@ -1079,7 +1081,7 @@ int kvm_riscv_cove_init(void)
 	}
 
 	riscv_cove_enabled = true;
-	kvm_info("The platform has confidential computing feature enabled\n");
+	kvm_info("The platform has confidential computing feature enabled!\n");
 	kvm_info("TSM version %d is loaded and ready to run\n", tinfo.version);
 
 	return 0;

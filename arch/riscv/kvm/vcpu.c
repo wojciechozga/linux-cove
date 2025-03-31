@@ -701,7 +701,10 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
-	nacl_shmem_csr_write(nacl_shmem(), CSR_HVIP, csr->hvip);
+
+	if (is_cove_vm_finalized(vcpu->kvm) || is_cove_vm_single_step_initializing(vcpu->kvm)) {
+		nacl_shmem_csr_write(nacl_shmem(), CSR_HVIP, csr->hvip);
+	}
 	nacl_csr_write(CSR_HVIP, csr->hvip);
 	kvm_riscv_vcpu_aia_update_hvip(vcpu);
 }
