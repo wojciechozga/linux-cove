@@ -110,6 +110,10 @@ struct kvm_riscv_cove_measure_region {
 	unsigned long size;
 };
 
+/* For preloading TVM initial memory regions */
+struct kvm_riscv_cove_preload_regions {
+};
+
 /*
  * ISA extension IDs specific to KVM. This is not the same as the host ISA
  * extension IDs as that is internal to the host and should not be exposed
