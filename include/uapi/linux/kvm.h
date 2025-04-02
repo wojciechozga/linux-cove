@@ -1571,7 +1571,8 @@ struct kvm_s390_ucas_mapping {
 /* Available with KVM_CAP_COUNTER_OFFSET */
 #define KVM_ARM_SET_COUNTER_OFFSET _IOW(KVMIO,  0xb5, struct kvm_arm_counter_offset)
 
-#define KVM_RISCV_COVE_MEASURE_REGION  _IOR(KVMIO, 0xb5, struct kvm_riscv_cove_measure_region)
+#define KVM_RISCV_COVE_MEASURE_REGION  _IOR(KVMIO, 0xb6, struct kvm_riscv_cove_measure_region)
+#define KVM_RISCV_COVE_VM_PRELOAD  _IOR(KVMIO, 0xb7, struct kvm_riscv_cove_vm_finalize)
 
 /* ioctl for vm fd */
 #define KVM_CREATE_DEVICE	  _IOWR(KVMIO,  0xe0, struct kvm_create_device)

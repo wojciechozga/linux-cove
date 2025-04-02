@@ -569,21 +569,44 @@ int kvm_riscv_cove_handle_pagefault(struct kvm_vcpu *vcpu, gpa_t gpa,
 	return kvm_riscv_cove_gstage_map(vcpu, gpa, hva);
 }
 
-void kvm_riscv_cove_gstage_preload(struct kvm_vcpu *vcpu) {
+int kvm_riscv_cove_gstage_preload(struct kvm *kvm) {
+	struct kvm_cove_tvm_context *tvmc = kvm->arch.tvmc;
+	struct kvm_riscv_cove_page *cpage, *temp;
+	struct kvm_vcpu *target_vcpu, *boot_vcpu;
 	struct kvm_memory_slot *memslot;
-	unsigned long hva, gpa, page;
-	bool writable;
-	int bkt;
+	unsigned long target_vcpuid;
 
-	kvm_for_each_memslot(memslot, bkt, kvm_vcpu_memslots(vcpu)) {
-		gpa = gfn_to_gpa(memslot->base_gfn);
-		for (page = 0; page < memslot->npages; page++) {
-			gpa = gfn_to_gpa(memslot->base_gfn) + page * PAGE_SIZE;
-			hva = gfn_to_hva_memslot_prot(memslot, gpa_to_gfn(gpa), &writable);
-			if (!kvm_is_error_hva(hva))
-				kvm_riscv_gstage_map(vcpu, memslot, gpa, hva, writable);
+	unsigned long hva, gpa;
+	int i;
+
+	printk("kvm_riscv_cove_gstage_preload \n");
+
+	if (!tvmc)
+		return -EFAULT;
+
+	kvm_for_each_vcpu(target_vcpuid, target_vcpu, kvm) {
+		if (target_vcpu->vcpu_idx == 0) {
+			printk("kvm_riscv_cove_gstage_preload, found boot vcpu\n");
+			boot_vcpu = target_vcpu;
+			break;
 		}
 	}
+
+	if (!boot_vcpu)
+		return -EFAULT;
+
+	list_for_each_entry_safe(cpage, temp, &tvmc->measured_pages, link) {
+		printk("kvm_riscv_cove_gstage_preload, region %lx pages %ld\n", cpage->gpa, cpage->npages);
+		for (i=0; i<cpage->npages; i++) {
+			gpa = cpage->gpa + i * PAGE_SIZE;
+			memslot = gfn_to_memslot(boot_vcpu->kvm, gpa_to_gfn(gpa));
+			hva = gfn_to_hva_memslot_prot(memslot, gpa_to_gfn(gpa), NULL);
+			if (!kvm_is_error_hva(hva))
+				kvm_riscv_gstage_map(boot_vcpu, memslot, gpa, hva, NULL);
+		}
+	}
+	printk("kvm_riscv_cove_gstage_preload: done\n");
+	return 0;
 }
 
 void noinstr kvm_riscv_cove_vcpu_switchto(struct kvm_vcpu *vcpu, struct kvm_cpu_trap *trap)
@@ -756,10 +779,23 @@ int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm, struct kvm_riscv_cove_measu
 		tvmc->cove_tap_addr = mr->gpa;
 	}
 
-	if (!is_cove_vm_multi_step_initializing(kvm))
-		return 0;
-
 	num_pages = bytes_to_pages(mr->size);
+
+	if (is_cove_vm_single_step_initializing(kvm)) {
+		printk("kvm_riscv_cove_vm_measure_pages %lx %ld \n", mr->gpa, num_pages);
+		cpage = kmalloc(sizeof(*cpage), GFP_KERNEL_ACCOUNT);
+		if (!cpage) {
+			return -ENOMEM;
+		}
+		cpage->npages = num_pages;
+		cpage->gpa = mr->gpa;
+		cpage->hva = mr->userspace_addr;
+		cpage->is_mapped = false;
+		INIT_LIST_HEAD(&cpage->link);
+		list_add(&cpage->link, &tvmc->measured_pages);
+		return 0;
+	}
+
 	conf = &tvmc->confidential_region;
 
 	if (!IS_ALIGNED(mr->userspace_addr, PAGE_SIZE) ||

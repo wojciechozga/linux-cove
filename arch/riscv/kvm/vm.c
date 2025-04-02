@@ -243,6 +243,8 @@ int kvm_arch_vm_ioctl(struct file *filp, unsigned int ioctl, unsigned long arg)
 			return -EFAULT;
 
 		return kvm_riscv_cove_vm_measure_pages(kvm, &mr);
+	case KVM_RISCV_COVE_VM_PRELOAD:
+		return kvm_riscv_cove_gstage_preload(kvm);
 	default:
 		return -EINVAL;
 	}

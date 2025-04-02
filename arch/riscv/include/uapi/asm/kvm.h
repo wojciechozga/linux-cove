@@ -124,6 +124,9 @@ struct kvm_riscv_cove_measure_region {
 	enum KVM_RISCV_COVE_REGION type;
 };
 
+struct kvm_riscv_cove_vm_finalize {
+};
+
 /*
  * ISA extension IDs specific to KVM. This is not the same as the host ISA
  * extension IDs as that is internal to the host and should not be exposed

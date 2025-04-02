@@ -168,14 +168,7 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	 * Keep all vcpus with non-zero id in power-off state so that
 	 * they can be brought up using SBI HSM extension.
 	 */
-	if (vcpu->vcpu_idx == 0) {
-		/*
-		 * The single-step CoVE guest creation process requires that
-		 * all TVM pages are present in the main memory during promotion.
-		*/
-		if (unlikely(is_cove_vm_single_step_initializing(vcpu->kvm)))
-			kvm_riscv_cove_gstage_preload(vcpu);
-	} else
+	if (vcpu->vcpu_idx != 0)
 		kvm_riscv_vcpu_power_off(vcpu);
 }
 
@@ -669,6 +662,11 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 			kvm_riscv_reset_vcpu(vcpu);
 
 		if (is_cove_vm_finalized(vcpu->kvm)) {
+			kvm_check_request(KVM_REQ_UPDATE_HGATP, vcpu);
+			kvm_check_request(KVM_REQ_FENCE_I, vcpu);
+			kvm_check_request(KVM_REQ_HFENCE_GVMA_VMID_ALL, vcpu);
+			kvm_check_request(KVM_REQ_HFENCE_VVMA_ALL, vcpu);
+			kvm_check_request(KVM_REQ_HFENCE, vcpu);
 			/*
 			 * KVM doesn't need to do anything special here
 			 * as the TSM is expected track the tlb version and issue
