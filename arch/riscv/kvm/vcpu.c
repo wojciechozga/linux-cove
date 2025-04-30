@@ -899,7 +899,6 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 			kvm_vcpu_srcu_read_lock(vcpu);
 			continue;
 		}
-
 		/*
 		 * Cleanup stale TLB enteries
 		 *

@@ -579,14 +579,11 @@ int kvm_riscv_cove_gstage_preload(struct kvm *kvm) {
 	unsigned long hva, gpa;
 	int i;
 
-	printk("kvm_riscv_cove_gstage_preload \n");
-
 	if (!tvmc)
 		return -EFAULT;
 
 	kvm_for_each_vcpu(target_vcpuid, target_vcpu, kvm) {
 		if (target_vcpu->vcpu_idx == 0) {
-			printk("kvm_riscv_cove_gstage_preload, found boot vcpu\n");
 			boot_vcpu = target_vcpu;
 			break;
 		}
@@ -596,7 +593,6 @@ int kvm_riscv_cove_gstage_preload(struct kvm *kvm) {
 		return -EFAULT;
 
 	list_for_each_entry_safe(cpage, temp, &tvmc->measured_pages, link) {
-		printk("kvm_riscv_cove_gstage_preload, region %lx pages %ld\n", cpage->gpa, cpage->npages);
 		for (i=0; i<cpage->npages; i++) {
 			gpa = cpage->gpa + i * PAGE_SIZE;
 			memslot = gfn_to_memslot(boot_vcpu->kvm, gpa_to_gfn(gpa));
@@ -605,7 +601,6 @@ int kvm_riscv_cove_gstage_preload(struct kvm *kvm) {
 				kvm_riscv_gstage_map(boot_vcpu, memslot, gpa, hva, NULL);
 		}
 	}
-	printk("kvm_riscv_cove_gstage_preload: done\n");
 	return 0;
 }
 
@@ -782,7 +777,6 @@ int kvm_riscv_cove_vm_measure_pages(struct kvm *kvm, struct kvm_riscv_cove_measu
 	num_pages = bytes_to_pages(mr->size);
 
 	if (is_cove_vm_single_step_initializing(kvm)) {
-		printk("kvm_riscv_cove_vm_measure_pages %lx %ld \n", mr->gpa, num_pages);
 		cpage = kmalloc(sizeof(*cpage), GFP_KERNEL_ACCOUNT);
 		if (!cpage) {
 			return -ENOMEM;
